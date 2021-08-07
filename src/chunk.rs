@@ -51,11 +51,32 @@ impl Chunk {
         return self.constants.len() - 1;
     }
 
-    // fn disassemble_chunk(&mut self, name: &str) {
-    //     println!("== {} ==", name);
-    //     for i in 0..self.code.len() {
-    //         let instruction = self.code[i];
-    //     }
-    // }
+    pub fn disassemble_chunk(&mut self, name: &str) {
+        println!("== {} ==", name);
+        let mut offset = 0;
+        while offset < self.code.len() {
+            let instruction = self.code[offset];
+            offset = self.disassemble_instruction(instruction, offset);
+        }
+    }
+
+    fn disassemble_instruction(&self, instruction: u8, offset: usize) -> usize {
+        print!("{:#0x?} ", offset);
+        let parsed_instruction = map_instruction_to_opcode(instruction);
+        match parsed_instruction {
+            OpCode::OpReturn => {
+                println!("OpReturn");
+                offset + 1
+            }
+            OpCode::OpConstant => {
+                let constant = self.constants[self.code[offset + 1] as usize];
+                println!("OpConstant {}", constant);
+                offset + 2
+            }
+            _ => {
+                unimplemented!("disassemble_instruction, missing {:?}", parsed_instruction);
+            }
+        }
+    }
 
 }

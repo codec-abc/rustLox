@@ -11,4 +11,6 @@ fn main() {
     let constant_index = chunk.add_constant(1.2f64);
     chunk.write_chunk(constant_index as u8, 123);
     chunk.write_chunk(map_opcode_to_instruction(OpCode::OpReturn), 123);
+
+    chunk.disassemble_chunk("test chunk");
 }
