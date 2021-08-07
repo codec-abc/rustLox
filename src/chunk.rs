@@ -3,6 +3,10 @@ use crate::value::Value;
 #[derive(Debug, Clone)]
 pub enum OpCode {
     OpConstant,
+    OpAdd,
+    OpSubtract,
+    OpMultiply,
+    OpDivide,
     OpNegate,
     OpReturn,
 }
@@ -18,6 +22,10 @@ pub fn map_instruction_to_opcode(instruction: u8) -> OpCode {
         0u8 => OpCode::OpReturn,
         1u8 => OpCode::OpConstant,
         2u8 => OpCode::OpNegate,
+        3u8 => OpCode::OpAdd,
+        4u8 => OpCode::OpSubtract,
+        5u8 => OpCode::OpMultiply,
+        6u8 => OpCode::OpDivide,
         _ => unreachable!()
     }
 }
@@ -27,6 +35,10 @@ pub fn map_opcode_to_instruction(opcode: OpCode) -> u8 {
         OpCode::OpReturn => 0u8,
         OpCode::OpConstant => 1u8,
         OpCode::OpNegate => 2u8,
+        OpCode::OpAdd => 3u8,
+        OpCode::OpSubtract => 4u8,
+        OpCode::OpMultiply => 5u8,
+        OpCode::OpDivide => 6u8,
         _ => unreachable!()
     }
 }
@@ -87,6 +99,24 @@ impl Chunk {
                 println!("OpNegate");
                 offset + 1
             }
+
+            OpCode::OpAdd => {
+                println!("OpAdd");
+                offset + 1
+            }
+            OpCode::OpSubtract => {
+                println!("OpSubtract");
+                offset + 1
+            }
+            OpCode::OpMultiply => {
+                println!("OpMultiply");
+                offset + 1
+            }
+            OpCode::OpDivide => {
+                println!("OpDivide");
+                offset + 1
+            }
+
             _ => {
                 unimplemented!("disassemble_instruction, missing {:?}", parsed_instruction);
             }

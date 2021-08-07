@@ -13,8 +13,8 @@ const DEBUG_TRACE_EXECUTION : bool = true;
 pub struct VM {
     chunk: Chunk,
     ip: usize,
-    pub stack: [Value; STACK_MAX],
-    pub stack_top: usize,
+    stack: [Value; STACK_MAX],
+    stack_top: usize,
 }
 
 impl VM {
@@ -64,11 +64,49 @@ impl VM {
                     let value = self.pop();
                     self.push(-value);
                 }
+                op @ OpCode::OpAdd => {
+                    self.binary_op(op);
+                }
+                op @ OpCode::OpSubtract => {
+                    self.binary_op(op);
+                }
+                op @ OpCode::OpMultiply => {
+                    self.binary_op(op);
+                }
+                op @ OpCode::OpDivide => {
+                    self.binary_op(op);
+                }
+
                 _ =>  { 
                     panic!("OpCode not implemented {:?}", instruction); 
                 }
             }
         }
+    }
+
+    fn binary_op(&mut self, opcode: OpCode) {
+        let b = self.pop();
+        let a = self.pop();
+
+        let result = match opcode {
+            OpCode::OpAdd => {
+                a + b
+            }
+            OpCode::OpSubtract => {
+                a - b
+            }
+            OpCode::OpMultiply => {
+                a * b
+            }
+            OpCode::OpDivide => {
+                a / b
+            }
+            _ => { 
+                unimplemented!("binary op not implemented");
+            }
+        };
+
+        self.push(result);
     }
 
     fn read_instruction(&mut self) -> OpCode {
