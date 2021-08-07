@@ -1,23 +1,32 @@
 use crate::value::Value;
 
-enum OpCode {
-    OP_CONSTANT(Value),
-    OP_RETURN,
+#[derive(Debug, Clone)]
+pub enum OpCode {
+    OpConstant,
+    OpReturn,
 }
 
-struct Chunk {
+pub struct Chunk {
     // count: isize,
     // capacity: isize,
-    code: Vec<u8>,
+    pub code: Vec<u8>,
+    pub lines: Vec<usize>,
 }
 
-fn map_instruction_to_opcode(instruction: u8) -> OpCode {
+pub fn map_instruction_to_opcode(instruction: u8) -> OpCode {
     match instruction {
-        0u8 => OpCode::OP_RETURN,
+        0u8 => OpCode::OpReturn,
+        1u8 => OpCode::OpConstant,
         _ => unreachable!()
-
     }
+}
 
+pub fn map_opcode_to_instruction(opcode: OpCode) -> u8 {
+    match opcode {
+        OpCode::OpReturn => 0u8,
+        OpCode::OpConstant => 1u8,
+        _ => unreachable!()
+    }
 }
 
 impl Chunk {
@@ -26,6 +35,7 @@ impl Chunk {
             // count: 0,
             // capacity: 0,
             code: vec!(),
+            lines: vec!(),
         }
     }
 
