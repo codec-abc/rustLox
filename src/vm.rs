@@ -1,22 +1,51 @@
 use crate::{chunk::{Chunk, OpCode, map_instruction_to_opcode}, value::{Value, print_value}};
 
 #[derive(Debug, Clone)]
-enum InterpretResult {
+pub enum InterpretResult {
     InterpretOk,
     InterpretCompileError,
     InterpretRuntimeError,
 }
 
+const STACK_MAX: usize = 256;
+const DEBUG_TRACE_EXECUTION : bool = true;
+
 pub struct VM {
     chunk: Chunk,
     ip: usize,
+    pub stack: [Value; STACK_MAX],
+    pub stack_top: usize,
 }
 
 impl VM {
-    fn interpret(&mut self, chunk: Chunk) -> InterpretResult {
-        self.chunk = chunk;
-        self.ip = 0;
+
+    pub fn new(chunk: Chunk) -> VM {
+        VM {
+            chunk: chunk,
+            ip: 0,
+            stack: [0.0f64; STACK_MAX],
+            stack_top: 0,
+        }
+    }
+
+    pub fn reset_stack(&mut self) {
+        self.stack_top = 0;
+    }
+
+    pub fn interpret(&mut self, /* chunk: Chunk */) -> InterpretResult {
+        // self.chunk = chunk;
+        // self.ip = 0;
         self.run()
+    }
+
+    fn push(&mut self, value: Value) {
+        self.stack[self.stack_top] = value;
+        self.stack_top = self.stack_top + 1;
+    }
+
+    fn pop(&mut self) -> Value {
+        self.stack_top = self.stack_top - 1;
+        self.stack[self.stack_top]
     }
 
     fn run(&mut self) -> InterpretResult {
@@ -24,11 +53,16 @@ impl VM {
             let instruction = self.read_instruction();
             match instruction {
                 OpCode::OpReturn => {
+                    print_value(self.pop());
                     return InterpretResult::InterpretOk;
                 }
                 OpCode::OpConstant => {
                     let value = self.read_constant();
-                    print_value(value);
+                    self.push(value);
+                }
+                OpCode::OpNegate => {
+                    let value = self.pop();
+                    self.push(-value);
                 }
                 _ =>  { 
                     panic!("OpCode not implemented {:?}", instruction); 
@@ -50,6 +84,6 @@ impl VM {
 
     fn read_constant(&mut self) -> Value {
         let byte = self.get_next_byte();
-        unimplemented!("read constant");
+        self.chunk.constants[byte as usize]
     }
 }

@@ -3,6 +3,7 @@ use crate::value::Value;
 #[derive(Debug, Clone)]
 pub enum OpCode {
     OpConstant,
+    OpNegate,
     OpReturn,
 }
 
@@ -16,6 +17,7 @@ pub fn map_instruction_to_opcode(instruction: u8) -> OpCode {
     match instruction {
         0u8 => OpCode::OpReturn,
         1u8 => OpCode::OpConstant,
+        2u8 => OpCode::OpNegate,
         _ => unreachable!()
     }
 }
@@ -24,6 +26,7 @@ pub fn map_opcode_to_instruction(opcode: OpCode) -> u8 {
     match opcode {
         OpCode::OpReturn => 0u8,
         OpCode::OpConstant => 1u8,
+        OpCode::OpNegate => 2u8,
         _ => unreachable!()
     }
 }
@@ -79,6 +82,10 @@ impl Chunk {
                 let constant = self.constants[self.code[offset + 1] as usize];
                 println!("OpConstant {}", constant);
                 offset + 2
+            }
+            OpCode::OpNegate => {
+                println!("OpNegate");
+                offset + 1
             }
             _ => {
                 unimplemented!("disassemble_instruction, missing {:?}", parsed_instruction);
