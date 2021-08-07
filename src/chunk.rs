@@ -61,7 +61,14 @@ impl Chunk {
     }
 
     fn disassemble_instruction(&self, instruction: u8, offset: usize) -> usize {
-        print!("{:#0x?} ", offset);
+        print!("{:#06x?} ", offset);
+
+        if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
+            print!("   | ");
+        } else {
+            print!("{} ", self.lines[offset]);
+        }
+
         let parsed_instruction = map_instruction_to_opcode(instruction);
         match parsed_instruction {
             OpCode::OpReturn => {
