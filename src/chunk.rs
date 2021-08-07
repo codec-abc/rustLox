@@ -7,10 +7,9 @@ pub enum OpCode {
 }
 
 pub struct Chunk {
-    // count: isize,
-    // capacity: isize,
     pub code: Vec<u8>,
     pub lines: Vec<usize>,
+    pub constants: Vec<Value>,
 }
 
 pub fn map_instruction_to_opcode(instruction: u8) -> OpCode {
@@ -30,21 +29,26 @@ pub fn map_opcode_to_instruction(opcode: OpCode) -> u8 {
 }
 
 impl Chunk {
-    fn new() -> Chunk {
+    pub fn new() -> Chunk {
         Chunk {
-            // count: 0,
-            // capacity: 0,
             code: vec!(),
             lines: vec!(),
+            constants: vec!(),
         }
     }
 
-    fn write_chunk(&mut self, byte: u8) {
+    pub fn write_chunk(&mut self, byte: u8, line: usize) {
         self.code.push(byte);
+        self.lines.push(line);
     }
 
-    fn free_chunk(&mut self) {
+    pub fn free_chunk(&mut self) {
         self.code = vec!();
+    }
+
+    pub fn add_constant(&mut self, value: Value) -> usize {
+        self.constants.push(value);
+        return self.constants.len() - 1;
     }
 
     // fn disassemble_chunk(&mut self, name: &str) {
