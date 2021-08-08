@@ -141,7 +141,7 @@ impl Parser {
         } else if token.token_type == TokenType::TokenError {
 
         } else {
-            print!("at {}", token.content)
+            print!(" at {}", token.content)
         }
 
         println!(": {}", message);
@@ -149,17 +149,17 @@ impl Parser {
     }
 
     fn advance(&mut self) {
-        //self.previous = self.current;
-        std::mem::swap(&mut self.previous, &mut self.current);
+        self.previous = self.current.clone();
 
         loop {
             self.current = self.scanner.scan_token();
+            println!("token read {:?}", &self.current);
 
-            if self.current.token_type == TokenType::TokenError {
+            if self.current.token_type != TokenType::TokenError {
                 break;
             }
 
-            self.error_at_current("TODO: implement source substring to token");
+            self.error_at_current( &self.current.content.clone());
         }
     }
 

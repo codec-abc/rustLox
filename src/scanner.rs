@@ -267,7 +267,7 @@ impl Scanner {
 
                     break;
                 }
-                _ => { break; }
+                _ => { return; }
             }
         }
     }
@@ -311,7 +311,7 @@ impl Scanner {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current ==  self.source.chars().count()
+        self.current ==  self.source.as_bytes().len()
     }
 
     fn make_token(&self, token_type: TokenType) -> Token {
@@ -332,7 +332,7 @@ impl Scanner {
         Token {
             token_type: TokenType::TokenError,
             start: 0,
-            length: message.chars().count(),
+            length: message.as_bytes().len(),
             line: self.line,
             content: message.into()
         }
