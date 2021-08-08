@@ -173,8 +173,7 @@ impl Parser {
     pub fn compile(&mut self) -> bool {
         self.advance();
         self.expression();
-        // TODO: check this
-        //self.consume(TokenType::TokenEof, "Expect end of expression.");
+        self.consume(TokenType::TokenEof, "Expect end of expression.");
         self.end_compiler();
         return !self.had_error;
     }
