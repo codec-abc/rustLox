@@ -8,7 +8,6 @@ pub enum InterpretResult {
 }
 
 const STACK_MAX: usize = 256;
-const DEBUG_TRACE_EXECUTION : bool = true;
 
 pub struct VM {
     chunk: Chunk,
@@ -33,7 +32,6 @@ impl VM {
     }
 
     pub fn interpret(&mut self, source: &str) -> InterpretResult {
-        let mut chunk = Chunk::new();
         
         let mut parser = Parser::new(source);
 
@@ -84,10 +82,6 @@ impl VM {
                 }
                 op @ OpCode::OpDivide => {
                     self.binary_op(op);
-                }
-
-                _ =>  { 
-                    panic!("OpCode not implemented {:?}", instruction); 
                 }
             }
         }

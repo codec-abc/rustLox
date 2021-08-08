@@ -39,7 +39,6 @@ pub fn map_opcode_to_binary(opcode: OpCode) -> u8 {
         OpCode::OpSubtract => 4u8,
         OpCode::OpMultiply => 5u8,
         OpCode::OpDivide => 6u8,
-        _ => unreachable!()
     }
 }
 
@@ -115,10 +114,6 @@ impl Chunk {
             OpCode::OpDivide => {
                 println!("OpDivide");
                 offset + 1
-            }
-
-            _ => {
-                unimplemented!("disassemble_instruction, missing {:?}", parsed_instruction);
             }
         }
     }

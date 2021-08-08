@@ -1,6 +1,6 @@
 use std::{env, fs, io::{self, Write}, process::exit};
 
-use chunk::{Chunk, OpCode, map_opcode_to_binary};
+use chunk::{Chunk};
 use vm::{InterpretResult, VM};
 
 mod scanner;
