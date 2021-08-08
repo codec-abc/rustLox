@@ -1,4 +1,4 @@
-use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, value::{Value, print_value}};
+use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, compiler::Parser, value::{Value, print_value}};
 
 #[derive(Debug, Clone)]
 pub enum InterpretResult {
@@ -34,8 +34,10 @@ impl VM {
 
     pub fn interpret(&mut self, source: &str) -> InterpretResult {
         let mut chunk = Chunk::new();
+        
+        let mut parser = Parser::new(source);
 
-        if !self.compile(source, &mut chunk) {
+        if !parser.compile() {
             return InterpretResult::InterpretCompileError;
         }
 

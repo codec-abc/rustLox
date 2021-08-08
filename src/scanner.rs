@@ -5,6 +5,7 @@ pub struct Scanner {
     current: usize,
 }
 
+#[derive(Debug, Clone)]
 pub struct Token {
     pub token_type: TokenType,
     start: usize,
@@ -13,7 +14,19 @@ pub struct Token {
     pub content: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+impl Token {
+    pub fn new_dummy_token() -> Token {
+        Token {
+            token_type: TokenType::TokenComma,
+            start: 0,
+            length: 0,
+            line: 0,
+            content: "DummyToken".into()
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenType {
     TokenLeftParen, 
     TokenRightParen,
@@ -68,12 +81,12 @@ fn is_alpha(c: char) -> bool {
 }
 
 impl Scanner {
-    pub fn new(source: String) -> Scanner {
+    pub fn new(source: &str) -> Scanner {
         Scanner {
             line: 1,
             current: 0,
             start: 0,
-            source: source
+            source: source.into()
         }
     }
 

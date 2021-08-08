@@ -1,6 +1,6 @@
 use crate::{chunk::{Chunk, OpCode, map_opcode_to_binary}, scanner::{Scanner, Token, TokenType}, value::Value};
 
-struct Parser {
+pub struct Parser {
     current: Token,
     previous: Token,
     had_error: bool,
@@ -57,6 +57,17 @@ struct ParseRule {
 }
 
 impl Parser {
+
+    pub fn new(source: &str) -> Parser {
+        Parser {
+            current: Token::new_dummy_token(),
+            previous: Token::new_dummy_token(),
+            had_error: false,
+            panic_mode: false,
+            scanner: Scanner::new(source),
+            compiling_chunk: Chunk::new(),
+        }
+    }
 
     fn get_rule(operator_type: TokenType) -> ParseRule {
         let (prefix, infix, precedence) = Parser::get_rule_tuple(operator_type);
@@ -115,7 +126,7 @@ impl Parser {
     }
 
     fn error(&mut self, message: &str) {
-        self.error_at(&self.previous, message);
+        self.error_at(&self.previous.clone(), message);
     }
 
     fn error_at(&mut self, token: &Token, message: &str) {
@@ -138,7 +149,8 @@ impl Parser {
     }
 
     fn advance(&mut self) {
-        self.previous = self.current;
+        //self.previous = self.current;
+        std::mem::swap(&mut self.previous, &mut self.current);
 
         loop {
             self.current = self.scanner.scan_token();
@@ -152,11 +164,10 @@ impl Parser {
     }
 
     fn error_at_current(&mut self, message: &str) {
-        self.error_at(&self.current, message);
+        self.error_at(&self.current.clone(), message);
     }
 
-    pub fn compile(&mut self, source: &str) -> bool {
-        let mut scanner = Scanner::new(source.into());
+    pub fn compile(&mut self) -> bool {
         self.advance();
         self.expression();
         self.consume(TokenType::TokenEof, "Expect end of expression.");
@@ -173,11 +184,12 @@ impl Parser {
     }
 
     fn emit_byte(&mut self, byte: u8) {
-        self.current_chunk().write_chunk(byte, self.previous.line);
+        let line = self.previous.line;
+        self.current_chunk().write_chunk(byte, line);
     }
 
-    fn current_chunk(&mut self) -> &Chunk {
-        &self.compiling_chunk
+    fn current_chunk(&mut self) -> &mut Chunk {
+        &mut self.compiling_chunk
     }
 
     fn emit_bytes(&mut self, byte1: u8, byte2: u8) {
@@ -203,7 +215,8 @@ impl Parser {
     }
 
     fn emit_constant(&mut self, value: Value) {
-        self.emit_bytes(map_opcode_to_binary(OpCode::OpConstant), self.make_constant(value));
+        let constant = self.make_constant(value);
+        self.emit_bytes(map_opcode_to_binary(OpCode::OpConstant), constant);
     }
 
     pub fn make_constant(&mut self, value: Value) -> u8 {
