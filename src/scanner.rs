@@ -17,7 +17,7 @@ pub struct Token {
 impl Token {
     pub fn new_dummy_token() -> Token {
         Token {
-            token_type: TokenType::TokenComma,
+            token_type: TokenType::TokenNumber,
             start: 0,
             length: 0,
             line: 0,
@@ -250,7 +250,9 @@ impl Scanner {
         loop {
             let c = self.peek();
             match c {
-                ' ' | '\r' | '\t' => { self.advance(); }
+                ' ' | '\r' | '\t' => { 
+                    self.advance(); 
+                }
                 '\n' => { 
                     self.line = self.line + 1;
                     self.advance();
@@ -311,7 +313,7 @@ impl Scanner {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current ==  self.source.as_bytes().len()
+        self.current >=  self.source.as_bytes().len() - 1
     }
 
     fn make_token(&self, token_type: TokenType) -> Token {

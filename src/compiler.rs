@@ -58,6 +58,10 @@ struct ParseRule {
 
 impl Parser {
 
+    pub fn get_compiling_chunk(self) -> Chunk {
+        self.compiling_chunk
+    }
+
     pub fn new(source: &str) -> Parser {
         Parser {
             current: Token::new_dummy_token(),
@@ -153,7 +157,6 @@ impl Parser {
 
         loop {
             self.current = self.scanner.scan_token();
-            println!("token read {:?}", &self.current);
 
             if self.current.token_type != TokenType::TokenError {
                 break;
@@ -170,7 +173,9 @@ impl Parser {
     pub fn compile(&mut self) -> bool {
         self.advance();
         self.expression();
-        self.consume(TokenType::TokenEof, "Expect end of expression.");
+        // TODO: check this
+        //self.consume(TokenType::TokenEof, "Expect end of expression.");
+        self.end_compiler();
         return !self.had_error;
     }
 

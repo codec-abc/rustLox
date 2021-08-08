@@ -41,7 +41,7 @@ impl VM {
             return InterpretResult::InterpretCompileError;
         }
 
-        self.chunk = chunk;
+        self.chunk = parser.get_compiling_chunk();
         self.stack_top = 0;
         self.ip = 0;
         self.run()
