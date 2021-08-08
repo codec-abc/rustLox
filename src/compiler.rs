@@ -41,6 +41,7 @@ fn get_next_rule(precedence: Precedence) -> Precedence {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum ParseFn {
     Grouping,
     Unary,
@@ -57,12 +58,22 @@ struct ParseRule {
 
 impl Parser {
 
-    pub fn get_rule(operator_type: TokenType) -> (ParseFn, ParseFn, Precedence) {
+    fn get_rule(operator_type: TokenType) -> ParseRule {
+        let (prefix, infix, precedence) = Parser::get_rule_tuple(operator_type);
+
+        ParseRule {
+            prefix: prefix,
+            infix: infix,
+            precedence: precedence
+        }
+    }
+
+    fn get_rule_tuple(operator_type: TokenType) -> (ParseFn, ParseFn, Precedence) {
         match operator_type {
-            TokenType::TokenLeftParen =>    (ParseFn::Grouping, ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenRightParen =>   (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenLeftBrace =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone), 
-            TokenType::TokenRightBrace =>   (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenLeftParen =>     (ParseFn::Grouping, ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenRightParen =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenLeftBrace =>     (ParseFn::None,     ParseFn::None,   Precedence::PrecNone), 
+            TokenType::TokenRightBrace =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenComma =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenDot =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenMinus =>         (ParseFn::Unary,    ParseFn::Binary, Precedence::PrecTerm),
@@ -71,13 +82,13 @@ impl Parser {
             TokenType::TokenSlash =>         (ParseFn::None,     ParseFn::Binary, Precedence::PrecFactor),
             TokenType::TokenStar =>          (ParseFn::None,     ParseFn::Binary, Precedence::PrecFactor),
             TokenType::TokenBang =>          (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenBangEqual =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenBangEqual =>     (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenEqual =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenEqualEqual =>   (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenEqualEqual =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenGreater =>       (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenGreaterEqual => (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenGreaterEqual =>  (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenLess =>          (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenLessEqual =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenLessEqual =>     (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenIdentifier =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenString =>        (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenNumber =>        (ParseFn::Number,   ParseFn::None,   Precedence::PrecNone),
@@ -222,15 +233,39 @@ impl Parser {
     }
 
     fn parse_precedence(&mut self, precedence: Precedence) {
+        self.advance();
+        let rule = Parser::get_rule(self.previous.token_type);
 
+        if rule.prefix == ParseFn::None {
+            self.error("Expect expression.");
+            return;
+        }
+      
+        self.run_rule(rule.prefix);
+
+        while precedence <= Parser::get_rule(self.current.token_type).precedence {
+            self.advance();
+            let infix= Parser::get_rule(self.previous.token_type).infix;
+            self.run_rule(infix);
+        }
+    }
+
+    fn run_rule(&mut self, rule: ParseFn) {
+        match rule {
+            ParseFn::Binary => { self.binary(); },
+            ParseFn::Grouping => { self.grouping(); },
+            ParseFn::Number => { self.number(); },
+            ParseFn::Unary => { self.unary(); },
+            _ => unreachable!(),
+        }
     }
 
     fn binary(&mut self) {
         let operator_type: TokenType = self.previous.token_type;
 
-        let (prefix, infix, precedence) = Parser::get_rule(operator_type);
+        let rule= Parser::get_rule(operator_type);
 
-        self.parse_precedence(get_next_rule(precedence));
+        self.parse_precedence(get_next_rule(rule.precedence));
 
         match operator_type {
             TokenType::TokenPlus => self.emit_byte(map_opcode_to_binary(OpCode::OpAdd)),
