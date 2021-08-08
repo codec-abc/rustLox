@@ -7,9 +7,10 @@ pub struct Scanner {
 
 pub struct Token {
     pub token_type: TokenType,
-    pub start: usize,
-    pub length: usize,
+    start: usize,
+    length: usize,
     pub line: usize,
+    pub content: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -301,20 +302,26 @@ impl Scanner {
     }
 
     fn make_token(&self, token_type: TokenType) -> Token {
+
+        let string = self.source[self.start..self.current].into();
+
         Token {
             token_type: token_type,
             start: self.start,
             length: self.current - self.start,
             line: self.line,
+            content: string
         }
     }
 
     fn error_token(&self, message: &str) -> Token {
+
         Token {
             token_type: TokenType::TokenError,
             start: 0,
             length: message.chars().count(),
-            line: self.line
+            line: self.line,
+            content: message.into()
         }
     }
 }

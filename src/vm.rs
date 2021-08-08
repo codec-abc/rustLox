@@ -1,4 +1,4 @@
-use crate::{chunk::{Chunk, OpCode, map_instruction_to_opcode}, value::{Value, print_value}};
+use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, value::{Value, print_value}};
 
 #[derive(Debug, Clone)]
 pub enum InterpretResult {
@@ -32,9 +32,16 @@ impl VM {
         self.stack_top = 0;
     }
 
-    pub fn interpret(&mut self, /* chunk: Chunk */) -> InterpretResult {
-        // self.chunk = chunk;
-        // self.ip = 0;
+    pub fn interpret(&mut self, source: &str) -> InterpretResult {
+        let mut chunk = Chunk::new();
+
+        if !self.compile(source, &mut chunk) {
+            return InterpretResult::InterpretCompileError;
+        }
+
+        self.chunk = chunk;
+        self.stack_top = 0;
+        self.ip = 0;
         self.run()
     }
 
@@ -111,7 +118,7 @@ impl VM {
 
     fn read_instruction(&mut self) -> OpCode {
         let byte = self.get_next_byte();
-        map_instruction_to_opcode(byte)
+        map_binary_to_opcode(byte)
     }
 
     fn get_next_byte(&mut self) -> u8 {

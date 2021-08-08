@@ -17,7 +17,7 @@ pub struct Chunk {
     pub constants: Vec<Value>,
 }
 
-pub fn map_instruction_to_opcode(instruction: u8) -> OpCode {
+pub fn map_binary_to_opcode(instruction: u8) -> OpCode {
     match instruction {
         0u8 => OpCode::OpReturn,
         1u8 => OpCode::OpConstant,
@@ -30,7 +30,7 @@ pub fn map_instruction_to_opcode(instruction: u8) -> OpCode {
     }
 }
 
-pub fn map_opcode_to_instruction(opcode: OpCode) -> u8 {
+pub fn map_opcode_to_binary(opcode: OpCode) -> u8 {
     match opcode {
         OpCode::OpReturn => 0u8,
         OpCode::OpConstant => 1u8,
@@ -84,7 +84,7 @@ impl Chunk {
             print!("{} ", self.lines[offset]);
         }
 
-        let parsed_instruction = map_instruction_to_opcode(instruction);
+        let parsed_instruction = map_binary_to_opcode(instruction);
         match parsed_instruction {
             OpCode::OpReturn => {
                 println!("OpReturn");
