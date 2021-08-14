@@ -91,7 +91,6 @@ impl Scanner {
     }
 
     pub fn scan_token(&mut self) -> Token {
-        // TODO: check this
         if self.is_at_end() {
             return self.make_token(TokenType::TokenEof);
         }
@@ -190,8 +189,8 @@ impl Scanner {
                 if self.current - self.start > 1 {
                     let next_starting_char = self.source.as_bytes()[self.start + 1] as char;
                     match next_starting_char {
-                        'h' => { return self.check_keyword(2, 2, "is", TokenType::TokenFalse); }
-                        'r' => { return self.check_keyword(2, 2, "ue", TokenType::TokenFor); }
+                        'h' => { return self.check_keyword(2, 2, "is", TokenType::TokenThis); }
+                        'r' => { return self.check_keyword(2, 2, "ue", TokenType::TokenTrue); }
                         _ => return default,
                     }
                 }
@@ -204,14 +203,13 @@ impl Scanner {
     fn check_keyword(&mut self, start: usize, length: usize, rest: &str, token_type: TokenType) -> TokenType {
         if self.current - self.start == start + length {
             for i in 0..length  {
-                let current_substring_char = self.source.as_bytes()[self.start];
+                let current_substring_char = self.source.as_bytes()[self.start + start + i];
                 let to_compare_to = rest.as_bytes()[i];
 
                 if current_substring_char != to_compare_to {
                     return TokenType::TokenIdentifier;
                 }
             }
-
             return token_type;
         }
 

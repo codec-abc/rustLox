@@ -37,7 +37,6 @@ fn get_next_rule(precedence: Precedence) -> Precedence {
         Precedence::PrecUnary => Precedence::PrecCall,
         Precedence::PrecCall => Precedence::PrecPrimary,
         Precedence::PrecPrimary => Precedence::PrecPrimary,
-
     }
 }
 
@@ -47,7 +46,8 @@ enum ParseFn {
     Unary,
     Binary,
     Number,
-    None
+    None,
+    Literal,
 }
 
 struct ParseRule {
@@ -96,31 +96,31 @@ impl Parser {
             TokenType::TokenSemicolon =>     (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenSlash =>         (ParseFn::None,     ParseFn::Binary, Precedence::PrecFactor),
             TokenType::TokenStar =>          (ParseFn::None,     ParseFn::Binary, Precedence::PrecFactor),
-            TokenType::TokenBang =>          (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenBangEqual =>     (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenBang =>          (ParseFn::Unary,    ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenBangEqual =>     (ParseFn::None,     ParseFn::Binary, Precedence::PrecEquality),
             TokenType::TokenEqual =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenEqualEqual =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenGreater =>       (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenGreaterEqual =>  (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenLess =>          (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenLessEqual =>     (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenEqualEqual =>    (ParseFn::None,     ParseFn::Binary, Precedence::PrecEquality),
+            TokenType::TokenGreater =>       (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
+            TokenType::TokenGreaterEqual =>  (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
+            TokenType::TokenLess =>          (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
+            TokenType::TokenLessEqual =>     (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
             TokenType::TokenIdentifier =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenString =>        (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenNumber =>        (ParseFn::Number,   ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenAnd =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenClass =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenElse =>          (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenFalse =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenFalse =>         (ParseFn::Literal,  ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenFor =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenFun =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenIf =>            (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenNil =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenNil =>           (ParseFn::Literal,  ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenOr =>            (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenPrint =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenReturn =>        (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenSuper =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenThis =>          (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenTrue =>          (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenTrue =>          (ParseFn::Literal,  ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenVar =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenWhile =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenError =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
@@ -214,8 +214,8 @@ impl Parser {
     }
     
     fn number(&mut self) {
-        let value : Value  = self.previous.content.parse().unwrap();
-        self.emit_constant(value);
+        let value : f64  = self.previous.content.parse().unwrap();
+        self.emit_constant(Value::Number(value));
     }
 
     fn emit_constant(&mut self, value: Value) {
@@ -244,6 +244,7 @@ impl Parser {
         self.parse_precedence(Precedence::PrecUnary);
 
         match operator_type {
+            TokenType::TokenBang => self.emit_byte(map_opcode_to_binary(OpCode::OpNot)),
             TokenType::TokenMinus => self.emit_byte(map_opcode_to_binary(OpCode::OpNegate)),
             _ => {}
         }
@@ -267,13 +268,23 @@ impl Parser {
         }
     }
 
+    fn literal(&mut self) {
+        match self.previous.token_type {
+            TokenType::TokenFalse => { self.emit_byte(map_opcode_to_binary(OpCode::OpFalse)); }
+            TokenType::TokenNil => { self.emit_byte(map_opcode_to_binary(OpCode::OpNil)); }
+            TokenType::TokenTrue => { self.emit_byte(map_opcode_to_binary(OpCode::OpTrue)); }
+            _ => { }
+        }
+    }
+
     fn run_rule(&mut self, rule: ParseFn) {
         match rule {
             ParseFn::Binary => { self.binary(); },
             ParseFn::Grouping => { self.grouping(); },
             ParseFn::Number => { self.number(); },
             ParseFn::Unary => { self.unary(); },
-            _ => unreachable!(),
+            ParseFn::Literal => { self.literal(); }
+            ParseFn::None => { panic!(); }
         }
     }
 
@@ -285,6 +296,12 @@ impl Parser {
         self.parse_precedence(get_next_rule(rule.precedence));
 
         match operator_type {
+            TokenType::TokenBangEqual => self.emit_bytes(map_opcode_to_binary(OpCode::OpEqual), map_opcode_to_binary(OpCode::OpNot)),
+            TokenType::TokenEqualEqual => self.emit_byte(map_opcode_to_binary(OpCode::OpEqual)),
+            TokenType::TokenGreater => self.emit_byte(map_opcode_to_binary(OpCode::OpGreater)),
+            TokenType::TokenGreaterEqual => self.emit_bytes(map_opcode_to_binary(OpCode::OpLess), map_opcode_to_binary(OpCode::OpNot)),
+            TokenType::TokenLess => self.emit_byte(map_opcode_to_binary(OpCode::OpLess)),
+            TokenType::TokenLessEqual => self.emit_bytes(map_opcode_to_binary(OpCode::OpGreater), map_opcode_to_binary(OpCode::OpNot)),
             TokenType::TokenPlus => self.emit_byte(map_opcode_to_binary(OpCode::OpAdd)),
             TokenType::TokenMinus => self.emit_byte(map_opcode_to_binary(OpCode::OpSubtract)),
             TokenType::TokenStar => self.emit_byte(map_opcode_to_binary(OpCode::OpMultiply)),

@@ -1,14 +1,21 @@
 use crate::value::Value;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, FromPrimitive, ToPrimitive)]
 pub enum OpCode {
-    OpConstant,
-    OpAdd,
-    OpSubtract,
-    OpMultiply,
-    OpDivide,
-    OpNegate,
-    OpReturn,
+    OpConstant = 0,
+    OpNil = 1,
+    OpTrue = 2,
+    OpFalse = 3,
+    OpEqual = 4,
+    OpGreater = 5,
+    OpLess = 6,
+    OpAdd = 7,
+    OpSubtract = 8,
+    OpMultiply = 9,
+    OpDivide = 10,
+    OpNot = 11,
+    OpNegate = 12,
+    OpReturn = 13,
 }
 
 pub struct Chunk {
@@ -18,28 +25,11 @@ pub struct Chunk {
 }
 
 pub fn map_binary_to_opcode(instruction: u8) -> OpCode {
-    match instruction {
-        0u8 => OpCode::OpReturn,
-        1u8 => OpCode::OpConstant,
-        2u8 => OpCode::OpNegate,
-        3u8 => OpCode::OpAdd,
-        4u8 => OpCode::OpSubtract,
-        5u8 => OpCode::OpMultiply,
-        6u8 => OpCode::OpDivide,
-        _ => unreachable!()
-    }
+    num::FromPrimitive::from_u8(instruction).unwrap()
 }
 
 pub fn map_opcode_to_binary(opcode: OpCode) -> u8 {
-    match opcode {
-        OpCode::OpReturn => 0u8,
-        OpCode::OpConstant => 1u8,
-        OpCode::OpNegate => 2u8,
-        OpCode::OpAdd => 3u8,
-        OpCode::OpSubtract => 4u8,
-        OpCode::OpMultiply => 5u8,
-        OpCode::OpDivide => 6u8,
-    }
+    num::ToPrimitive::to_u8(&opcode).unwrap()
 }
 
 impl Chunk {
@@ -113,6 +103,34 @@ impl Chunk {
             }
             OpCode::OpDivide => {
                 println!("OpDivide");
+                offset + 1
+            }
+            OpCode::OpNil => {
+                println!("OpNil");
+                offset + 1
+            }
+            OpCode::OpTrue => {
+                println!("OpTrue");
+                offset + 1
+            }
+            OpCode::OpFalse => {
+                println!("OpFalse");
+                offset + 1
+            }
+            OpCode::OpNot => {
+                println!("OpNot");
+                offset + 1
+            }
+            OpCode::OpEqual => {
+                println!("OpEqual");
+                offset + 1
+            }
+            OpCode::OpGreater => {
+                println!("OpGreater");
+                offset + 1
+            }
+            OpCode::OpLess => {
+                println!("OpLess");
                 offset + 1
             }
         }

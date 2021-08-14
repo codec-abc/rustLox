@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate num_derive;
+
 use std::{env, fs, io::{self, Write}, process::exit};
 
 use chunk::{Chunk};

@@ -1,6 +1,6 @@
-use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, compiler::Parser, value::{Value, print_value}};
+use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, compiler::Parser, value::{Value, print_value, values_equal}};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InterpretResult {
     InterpretOk,
     InterpretCompileError,
@@ -16,13 +16,17 @@ pub struct VM {
     stack_top: usize,
 }
 
+fn is_falsey(value: Value) -> bool {
+    value.is_nil() || (value.is_bool() && !value.as_bool())
+}
+
 impl VM {
 
     pub fn new(chunk: Chunk) -> VM {
         VM {
             chunk: chunk,
             ip: 0,
-            stack: [0.0f64; STACK_MAX],
+            stack: [Value::Nil; STACK_MAX],
             stack_top: 0,
         }
     }
@@ -55,6 +59,10 @@ impl VM {
         self.stack[self.stack_top]
     }
 
+    fn peek(&self, distance: usize) -> Value {
+        self.stack[self.stack_top -1 - distance]
+    }
+
     fn run(&mut self) -> InterpretResult {
         loop {
             let instruction = self.read_instruction();
@@ -67,42 +75,108 @@ impl VM {
                     let value = self.read_constant();
                     self.push(value);
                 }
+                OpCode::OpNot => {
+                    let popped = self.pop();
+                    self.push(Value::Boolean(is_falsey(popped)))
+                }
                 OpCode::OpNegate => {
+                    if ! self.peek(0).is_number() {
+                        self.runtime_error("Operand must be a number.");
+                        return InterpretResult::InterpretRuntimeError;
+                    }
                     let value = self.pop();
-                    self.push(-value);
+                    self.push(Value::Number(-value.as_number()));
                 }
                 op @ OpCode::OpAdd => {
-                    self.binary_op(op);
+                    let result = self.binary_op(op);
+                    if result != InterpretResult::InterpretOk {
+                        return result;
+                    }
                 }
                 op @ OpCode::OpSubtract => {
-                    self.binary_op(op);
+                    let result = self.binary_op(op);
+                    if result != InterpretResult::InterpretOk {
+                        return result;
+                    }
                 }
                 op @ OpCode::OpMultiply => {
-                    self.binary_op(op);
+                    let result = self.binary_op(op);
+                    if result != InterpretResult::InterpretOk {
+                        return result;
+                    }
                 }
                 op @ OpCode::OpDivide => {
-                    self.binary_op(op);
+                    let result = self.binary_op(op);
+                    if result != InterpretResult::InterpretOk {
+                        return result;
+                    }
                 }
+                OpCode::OpNil => {
+                    self.push(Value::Nil);
+                }
+                OpCode::OpTrue => {
+                    self.push(Value::Boolean(true));
+                }
+                OpCode::OpFalse => {
+                    self.push(Value::Boolean(false));
+                }
+                OpCode::OpEqual => {
+                    let b = self.pop();
+                    let a = self.pop();
+
+                    self.push(Value::Boolean(values_equal(a, b)));
+                }
+                op @ OpCode::OpGreater => {
+                    let result = self.binary_op(op);
+                    if result != InterpretResult::InterpretOk {
+                        return result;
+                    }
+                }
+                op @ OpCode::OpLess => {
+                    let result = self.binary_op(op);
+                    if result != InterpretResult::InterpretOk {
+                        return result;
+                    }
+                }
+
             }
         }
     }
 
-    fn binary_op(&mut self, opcode: OpCode) {
-        let b = self.pop();
-        let a = self.pop();
+    fn runtime_error(&mut self, message: &str) {
+        println!("{}", message);
+
+        self.reset_stack();
+    }
+
+    fn binary_op(&mut self, opcode: OpCode) -> InterpretResult {
+
+        if !self.peek(0).is_number() || !self.peek(1).is_number() {
+            self.runtime_error("Operands must be numbers.");
+            return InterpretResult::InterpretRuntimeError;
+        }
+
+        let b = self.pop().as_number();
+        let a = self.pop().as_number();
 
         let result = match opcode {
             OpCode::OpAdd => {
-                a + b
+                Value::Number(a + b)
             }
             OpCode::OpSubtract => {
-                a - b
+                Value::Number(a - b)
             }
             OpCode::OpMultiply => {
-                a * b
+                Value::Number(a * b)
             }
             OpCode::OpDivide => {
-                a / b
+                Value::Number(a / b)
+            }
+            OpCode::OpGreater => {
+                Value::Boolean(a > b)
+            }
+            OpCode::OpLess => {
+                Value::Boolean(a < b)
             }
             _ => { 
                 unimplemented!("binary op not implemented");
@@ -110,6 +184,8 @@ impl VM {
         };
 
         self.push(result);
+
+        InterpretResult::InterpretOk
     }
 
     fn read_instruction(&mut self) -> OpCode {
