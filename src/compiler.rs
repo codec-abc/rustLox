@@ -273,7 +273,10 @@ impl Parser {
     }
 
     fn string(&mut self) {
-        let string = Box::new(self.previous.content.clone());
+        let mut previous_str = self.previous.content.clone();
+        previous_str.remove(0);
+        previous_str.remove(previous_str.len() - 1);
+        let string = Box::new(previous_str);
         let string_obj = ObjectString { string: Rc::new(string) };
         let value= Value::Object(Object::ObjString(string_obj));
         self.emit_constant(value);

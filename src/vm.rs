@@ -176,6 +176,7 @@ impl VM {
 
         if self.peek(0).is_string() && self.peek(1).is_string() {
             self.concatenate();
+            return InterpretResult::InterpretOk;
         }
 
         if !self.peek(0).is_number() || !self.peek(1).is_number() {
