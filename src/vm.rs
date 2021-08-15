@@ -18,6 +18,7 @@ pub struct VM {
     stack: [Value; STACK_MAX],
     stack_top: usize,
     objects: Vec<Rc<Object>>,
+    globals: HashMap<String, Value>,
 }
 
 fn is_falsey(value: Value) -> bool {
@@ -34,6 +35,7 @@ impl VM {
             stack: array,
             stack_top: 0,
             objects: vec!(),
+            globals: HashMap::new(),
         }
     }
 
@@ -148,9 +150,36 @@ impl VM {
                     print_value(self.pop());
                     println!("");
                 }
+                OpCode::OpPop => {
+                    self.pop();
+                }
+                OpCode::OpDefineGlobal => {
+                    let name = self.read_string();
+                    let value = self.peek(0);
+                    self.globals.insert(name, value);
+                    self.pop();
+                }
+                OpCode::OpGetGlobal => {
+                    let name = self.read_string();
+                    let maybe_key = self.globals.get(&name);
+                    if maybe_key.is_none() {
+                        let message = format!("Undefined variable '{}'", &name);
+                        self.runtime_error(&message);
+                        return InterpretResult::InterpretRuntimeError;
+                    }
+                    let key = maybe_key.unwrap().clone();
+                    self.push(key);
+                }
 
             }
         }
+    }
+
+    fn read_string(&mut self) -> String {
+        let constant = self.read_constant();
+        let obj = constant.as_object();
+        let name = obj.as_string();
+        name.str().into()
     }
 
     fn runtime_error(&mut self, message: &str) {

@@ -17,6 +17,9 @@ pub enum OpCode {
     OpNegate = 12,
     OpReturn = 13,
     OpPrint = 14,
+    OpPop = 15,
+    OpDefineGlobal = 16,
+    OpGetGlobal = 17,
 }
 
 pub struct Chunk {
@@ -136,6 +139,18 @@ impl Chunk {
             }
             OpCode::OpPrint => {
                 println!("OpPrint");
+                offset + 1
+            }
+            OpCode::OpPop => {
+                println!("OpPop");
+                offset + 1
+            }
+            OpCode::OpDefineGlobal => {
+                println!("OpDefineGlobal");
+                offset + 1
+            }
+            OpCode::OpGetGlobal => {
+                println!("OpGetGlobal");
                 offset + 1
             }
         }

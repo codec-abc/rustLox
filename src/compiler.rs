@@ -50,7 +50,8 @@ enum ParseFn {
     Number,
     None,
     Literal,
-    String
+    String,
+    Variable
 }
 
 struct ParseRule {
@@ -107,7 +108,7 @@ impl Parser {
             TokenType::TokenGreaterEqual =>  (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
             TokenType::TokenLess =>          (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
             TokenType::TokenLessEqual =>     (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
-            TokenType::TokenIdentifier =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenIdentifier =>    (ParseFn::Variable, ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenString =>        (ParseFn::String,   ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenNumber =>        (ParseFn::Number,   ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenAnd =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
@@ -186,13 +187,82 @@ impl Parser {
     }
 
     fn declaration(&mut self, vm: &mut VM) {
-        self.statement(vm)
+        if self.match_token(TokenType::TokenVar) {
+            self.var_declaration(vm);
+        } else {
+            self.statement(vm);
+        }
+
+        if self.panic_mode {
+            self.synchronize(vm);
+        }
+    }
+
+    fn var_declaration(&mut self, vm: &mut VM) {
+        let global = self.parse_variable("Expect variable name.", vm);
+
+        if self.match_token(TokenType::TokenEqual) {
+            self.expression(vm);
+        } else {
+            self.emit_byte(map_opcode_to_binary(OpCode::OpNil));
+        }
+
+        self.consume(TokenType::TokenSemicolon, "Expect ';' after variable declaration.");
+
+        self.define_variable(global);
+    }
+
+    fn parse_variable(&mut self, message: &str, vm: &mut VM) -> u8 {
+        self.consume(TokenType::TokenIdentifier, message);
+
+        return self.identifier_constant(&self.previous.clone(), vm);
+    }
+
+    fn define_variable(&mut self, global: u8) {
+        self.emit_bytes(map_opcode_to_binary(OpCode::OpDefineGlobal), global);
+    }
+
+    fn identifier_constant(&mut self, token: &Token, vm: &mut VM) -> u8 {
+        let obj_string = ObjectString::new(&token.content);
+        let obj = Rc::new(Object::ObjString(obj_string));
+        vm.add_object(obj.clone());
+        return self.make_constant(Value::Object(obj));
+    }
+
+    fn synchronize(&mut self, vm: &mut VM) {
+        self.panic_mode = false;
+
+        while self.current.token_type != TokenType::TokenEof {
+            if self.previous.token_type == TokenType::TokenSemicolon {
+                return;
+            }
+
+            match self.current.token_type {
+                TokenType::TokenClass => return,
+                TokenType::TokenFun => return,
+                TokenType::TokenVar => return,
+                TokenType::TokenFor => return,
+                TokenType::TokenIf => return,
+                TokenType::TokenWhile => return,
+                TokenType::TokenPrint => return,
+                TokenType::TokenReturn => return,
+                _ => {},
+            }
+        }
     }
 
     fn statement(&mut self, vm:&mut VM) {
         if self.match_token(TokenType::TokenPrint) {
             self.print_statement(vm);
+        } else {
+            self.expression_statement(vm);
         }
+    }
+
+    fn expression_statement(&mut self, vm: &mut VM) {
+        self.expression(vm);
+        self.consume(TokenType::TokenSemicolon, "Expect ';' after expression.");
+        self.emit_byte(map_opcode_to_binary(OpCode::OpPop))
     }
 
     fn match_token(&mut self, token_type: TokenType) -> bool {
@@ -217,8 +287,10 @@ impl Parser {
         if self.current.token_type == token_type {
             self.advance();
             return;
-        }
+        } 
 
+        //println!("consume failed. Expected {:?}, got {:?}", token_type, self.current);
+        
         self.error_at_current(message);
     }
 
@@ -314,6 +386,15 @@ impl Parser {
         self.emit_constant(value);
     }
 
+    fn variable(&mut self, vm: &mut VM) {
+        self.named_variable(self.previous.clone(), vm);
+    }
+
+    fn named_variable(&mut self, name: Token, vm: &mut VM) {
+        let arg = self.identifier_constant(&name, vm);
+        self.emit_bytes(map_opcode_to_binary(OpCode::OpGetGlobal), arg);
+    }
+
     fn literal(&mut self, vm: &mut VM) {
         match self.previous.token_type {
             TokenType::TokenFalse => { self.emit_byte(map_opcode_to_binary(OpCode::OpFalse)); }
@@ -331,6 +412,7 @@ impl Parser {
             ParseFn::Unary => { self.unary(vm); },
             ParseFn::Literal => { self.literal(vm); }
             ParseFn::String => { self.string(vm); }
+            ParseFn::Variable => { self.variable(vm); }
             ParseFn::None => { panic!(); }
         }
     }

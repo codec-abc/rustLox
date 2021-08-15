@@ -319,7 +319,8 @@ impl Scanner {
     }
 
     fn is_at_end(&self) -> bool {
-        self.current >=  self.source.as_bytes().len() - 1
+        let is_at_end = self.current >=  self.source.as_bytes().len();
+        is_at_end
     }
 
     fn make_token(&self, token_type: TokenType) -> Token {

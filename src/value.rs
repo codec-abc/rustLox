@@ -50,9 +50,9 @@ impl Value {
         }
     }
 
-    pub fn as_object(&self) -> &Object {
-        match &self {
-            Self::Object(a) => { return a },
+    pub fn as_object(&self) -> Rc<Object> {
+        match self {
+            Self::Object(a) => { return a.clone() },
             _ => panic!("try to cast a non object value"),
         }
     }
