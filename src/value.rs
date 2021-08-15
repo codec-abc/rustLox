@@ -1,5 +1,3 @@
-use std::{fmt::Display, rc::Rc};
-
 use generational_arena::Index;
 
 use crate::{object::{Object, print_object}, vm::VM};
