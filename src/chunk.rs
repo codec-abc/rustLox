@@ -85,7 +85,7 @@ impl Chunk {
             }
             OpCode::OpConstant => {
                 let constant = self.constants[self.code[offset + 1] as usize].clone();
-                println!("OpConstant {}", constant);
+                println!("OpConstant {:?}", constant);
                 offset + 2
             }
             OpCode::OpNegate => {

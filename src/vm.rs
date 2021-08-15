@@ -1,4 +1,5 @@
 use std::{collections::HashMap, rc::Rc};
+use generational_arena::{Arena, Index};
 
 use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, compiler::Parser, object::{Object, ObjectString}, value::{Value, print_value, values_equal}};
 
@@ -12,13 +13,28 @@ pub enum InterpretResult {
 const STACK_MAX: usize = 256;
 const INIT: Value = Value::Nil;
 
+struct VMString {
+    pub strings: Arena<String>,
+    pub string_to_index: HashMap<String, Index>,
+}
+
+impl VMString {
+    pub fn new() -> VMString {
+        VMString {
+            strings: Arena::new(),
+            string_to_index: HashMap::new(),
+        }
+    }
+}
+
 pub struct VM {
     chunk: Chunk,
     ip: usize,
     stack: [Value; STACK_MAX],
     stack_top: usize,
-    objects: Vec<Rc<Object>>,
+    objects: Arena<Object>,
     globals: HashMap<String, Value>,
+    strings: VMString
 }
 
 fn is_falsey(value: Value) -> bool {
@@ -34,8 +50,9 @@ impl VM {
             ip: 0,
             stack: array,
             stack_top: 0,
-            objects: vec!(),
+            objects: Arena::new(),
             globals: HashMap::new(),
+            strings: VMString::new(),
         }
     }
 
@@ -147,7 +164,7 @@ impl VM {
                     }
                 }
                 OpCode::OpPrint => {
-                    print_value(self.pop());
+                    print_value(self.pop(), &self);
                     println!("");
                 }
                 OpCode::OpPop => {
@@ -179,7 +196,7 @@ impl VM {
         let constant = self.read_constant();
         let obj = constant.as_object();
         let name = obj.as_string();
-        name.str().into()
+        self.strings.strings.get(*name.id()).unwrap().clone()
     }
 
     fn runtime_error(&mut self, message: &str) {
@@ -199,18 +216,21 @@ impl VM {
         let a_str = a_obj.as_string();
 
         let mut c = String::new();
-        c.push_str(a_str.str());
-        c.push_str(b_str.str());
+        
+        c.push_str(self.get_string_from_index(&a_str.id()));
+        c.push_str(self.get_string_from_index(&b_str.id()));
 
-        let str_obj = ObjectString::new(&c);
-        let object = Rc::new(Object::ObjString(str_obj));
-        self.add_object(object.clone());
+        let id = self.get_or_create_string(&c);
 
-        self.push(Value::Object(object));
+        let object = Object::ObjString(ObjectString::new(id));
+        let index = self.add_object(object.clone());
+
+        self.push(Value::Object(index, object));
     }
 
-    pub fn add_object(&mut self, object: Rc<Object>) {
-        self.objects.push(object);
+    pub fn add_object(&mut self, object: Object) -> Index {
+        let index = self.objects.insert(object);
+        index
     }
 
     fn binary_op(&mut self, opcode: OpCode) -> InterpretResult {
@@ -273,12 +293,56 @@ impl VM {
         self.chunk.constants[byte as usize].clone()
     }
 
+    pub fn get_string_from_index(&self, index: &Index) -> &String {
+        self.strings.strings.get(*index).unwrap()
+    }
+
+    pub fn get_index_from_string(&self, string: &str) -> Option<&Index> {
+        self.strings.string_to_index.get(string)
+    }
+
+    pub fn create_new_string(&mut self, string: &str) -> Index {
+        if self.strings.string_to_index.contains_key(string) {
+            panic!("Avoid duplication of strings");
+        }
+
+        let id = self.strings.strings.insert(string.into());
+        self.strings.string_to_index.insert(string.into(), id);
+        id
+    }
+
+    pub fn get_or_create_string(&mut self, string: &str) -> Index {
+
+        let id = self.get_index_from_string(string);
+
+        let id = if id.is_some() {
+            id.unwrap().clone()
+        } else {
+            self.create_new_string(string)
+        };
+
+        id
+    }
+
+    pub fn remove_string(&mut self, string: &str) {
+        let id = self.strings.string_to_index.get(string.into()).unwrap();
+        self.strings.strings.remove(*id);
+
+        let _ = self.strings.string_to_index.remove_entry(string.into());
+    }
+
     pub fn dump_stats(&self) {
         println!("================================================");
         println!("VM contains {} objects", self.objects.len());
-        for object in self.objects.iter() {
-            let inner_obj = object.as_ref();
-            println!("object is {:?}", inner_obj);
+        for (_, object) in self.objects.iter() {
+            print!("object is {:?}. ", object);
+            match &object {
+                Object::ObjString(str_obj) => {
+                    let id = str_obj.id();
+                    let str = self.strings.strings.get(*id).unwrap();
+                    println!("In particular, object is a string: {}", str); 
+                }
+            }
         }
         println!("================================================");
         println!("VM contains {} globals", self.globals.len());

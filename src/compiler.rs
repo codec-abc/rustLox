@@ -223,10 +223,12 @@ impl Parser {
     }
 
     fn identifier_constant(&mut self, token: &Token, vm: &mut VM) -> u8 {
-        let obj_string = ObjectString::new(&token.content);
-        let obj = Rc::new(Object::ObjString(obj_string));
-        vm.add_object(obj.clone());
-        return self.make_constant(Value::Object(obj));
+        let id = vm.get_or_create_string(&token.content);
+        let obj_string = ObjectString::new(id.clone());
+
+        let obj = Object::ObjString(obj_string);
+        let id = vm.add_object(obj.clone());
+        return self.make_constant(Value::Object(id, obj));
     }
 
     fn synchronize(&mut self, vm: &mut VM) {
@@ -379,10 +381,12 @@ impl Parser {
         let mut previous_str = self.previous.content.clone();
         previous_str.remove(0);
         previous_str.remove(previous_str.len() - 1);
-        let string_obj = ObjectString::new(&previous_str);
-        let obj = Rc::new(Object::ObjString(string_obj));
-        vm.add_object(obj.clone());
-        let value = Value::Object(obj);
+
+        let id = vm.get_or_create_string(&previous_str);
+        let string_obj = ObjectString::new(id);
+        let obj = Object::ObjString(string_obj);
+        let index = vm.add_object(obj.clone());
+        let value = Value::Object(index, obj);
         self.emit_constant(value);
     }
 

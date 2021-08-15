@@ -1,12 +1,14 @@
 use std::{fmt::Display, rc::Rc};
 
-use crate::object::{Object, print_object};
+use generational_arena::Index;
+
+use crate::{object::{Object, print_object}, vm::VM};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Boolean(bool),
     Number(f64),
-    Object(Rc<Object>),
+    Object(Index, Object), //object id
     Nil,
 }
 
@@ -38,21 +40,21 @@ impl Value {
 
     pub fn is_object(&self) -> bool {
         match &self {
-            Self::Object(_) => { true }
+            Self::Object(_, _) => { true }
             _ => { false }
         }
     }
 
     pub fn is_string(&self) -> bool {
         match &self {
-            Self::Object(a) => { a.is_string() }
+            Self::Object(_, a) => { a.is_string() }
             _ => { false }
         }
     }
 
-    pub fn as_object(&self) -> Rc<Object> {
+    pub fn as_object(&self) -> Object {
         match self {
-            Self::Object(a) => { return a.clone() },
+            Self::Object(_, a) => { return a.clone() },
             _ => panic!("try to cast a non object value"),
         }
     }
@@ -78,22 +80,11 @@ impl Default for Value {
     }
 }
 
-impl std::fmt::Display for Value {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        match &self {
-            Self::Nil => write!(f, "Nil"),
-            Self::Boolean(b) => write!(f, "{}", b),
-            Self::Number(n) => write!(f, "{}", n),
-            Self::Object(o) => write!(f, "{}", o),
-        }
-    }
-}
-
-pub fn print_value(value: Value) {
+pub fn print_value(value: Value, vm: &VM) {
     match value {
         Value::Boolean(b) => println!("{}", b),
         Value::Nil => println!("nil"),
         Value::Number(n) => println!("{}", n),
-        Value::Object(o) => print_object(&o),
+        Value::Object(_, o) => print_object(&o, vm),
     }
 }
