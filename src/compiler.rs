@@ -1,4 +1,6 @@
-use crate::{chunk::{Chunk, OpCode, map_opcode_to_binary}, scanner::{Scanner, Token, TokenType}, value::Value};
+use std::rc::Rc;
+
+use crate::{chunk::{Chunk, OpCode, map_opcode_to_binary}, object::{Object, ObjectString}, scanner::{Scanner, Token, TokenType}, value::Value};
 
 pub struct Parser {
     current: Token,
@@ -48,6 +50,7 @@ enum ParseFn {
     Number,
     None,
     Literal,
+    String
 }
 
 struct ParseRule {
@@ -105,7 +108,7 @@ impl Parser {
             TokenType::TokenLess =>          (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
             TokenType::TokenLessEqual =>     (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
             TokenType::TokenIdentifier =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenString =>        (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenString =>        (ParseFn::String,   ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenNumber =>        (ParseFn::Number,   ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenAnd =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
             TokenType::TokenClass =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
@@ -157,6 +160,7 @@ impl Parser {
 
         loop {
             self.current = self.scanner.scan_token();
+            //println!("token read is {:?}", &self.current);
 
             if self.current.token_type != TokenType::TokenError {
                 break;
@@ -268,6 +272,13 @@ impl Parser {
         }
     }
 
+    fn string(&mut self) {
+        let string = Box::new(self.previous.content.clone());
+        let string_obj = ObjectString { string: Rc::new(string) };
+        let value= Value::Object(Object::ObjString(string_obj));
+        self.emit_constant(value);
+    }
+
     fn literal(&mut self) {
         match self.previous.token_type {
             TokenType::TokenFalse => { self.emit_byte(map_opcode_to_binary(OpCode::OpFalse)); }
@@ -284,6 +295,7 @@ impl Parser {
             ParseFn::Number => { self.number(); },
             ParseFn::Unary => { self.unary(); },
             ParseFn::Literal => { self.literal(); }
+            ParseFn::String => { self.string(); }
             ParseFn::None => { panic!(); }
         }
     }

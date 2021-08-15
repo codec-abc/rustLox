@@ -144,7 +144,10 @@ impl Scanner {
                 return self.string();
             }
 
-            _ => return self.error_token("Unexpected character.")
+            _ => { 
+                println!("Unexpected character.");
+                return self.error_token("Unexpected character.");
+            }
         }
     }
 
@@ -236,8 +239,8 @@ impl Scanner {
         while self.peek() != '"' && !self.is_at_end() {
             if self.peek() == '\n' {
                 self.line = self.line + 1;
-                self.advance();
             }
+            self.advance();
         }
 
         if self.is_at_end() {

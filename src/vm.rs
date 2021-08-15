@@ -1,4 +1,6 @@
-use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, compiler::Parser, value::{Value, print_value, values_equal}};
+use std::rc::Rc;
+
+use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, compiler::Parser, object::{Object, ObjectString}, value::{Value, print_value, values_equal}};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InterpretResult {
@@ -8,6 +10,7 @@ pub enum InterpretResult {
 }
 
 const STACK_MAX: usize = 256;
+const INIT: Value = Value::Nil;
 
 pub struct VM {
     chunk: Chunk,
@@ -23,10 +26,11 @@ fn is_falsey(value: Value) -> bool {
 impl VM {
 
     pub fn new(chunk: Chunk) -> VM {
+        let array = [INIT; STACK_MAX];
         VM {
             chunk: chunk,
             ip: 0,
-            stack: [Value::Nil; STACK_MAX],
+            stack: array,
             stack_top: 0,
         }
     }
@@ -56,11 +60,11 @@ impl VM {
 
     fn pop(&mut self) -> Value {
         self.stack_top = self.stack_top - 1;
-        self.stack[self.stack_top]
+        self.stack[self.stack_top].clone()
     }
 
     fn peek(&self, distance: usize) -> Value {
-        self.stack[self.stack_top -1 - distance]
+        self.stack[self.stack_top -1 - distance].clone()
     }
 
     fn run(&mut self) -> InterpretResult {
@@ -149,7 +153,30 @@ impl VM {
         self.reset_stack();
     }
 
+    fn concatenate(&mut self) {
+        let b = self.pop();
+        let a = self.pop();
+
+        let b_obj = b.as_object();
+        let a_obj = a.as_object();
+
+        let b_str = b_obj.as_string();
+        let a_str = a_obj.as_string();
+
+        let mut c = String::new();
+        c.push_str(&*a_str.string);
+        c.push_str(&*b_str.string);
+
+        let str_obj = ObjectString { string : Rc::new(Box::new(c)) };
+
+        self.push(Value::Object(Object::ObjString(str_obj)));
+    }
+
     fn binary_op(&mut self, opcode: OpCode) -> InterpretResult {
+
+        if self.peek(0).is_string() && self.peek(1).is_string() {
+            self.concatenate();
+        }
 
         if !self.peek(0).is_number() || !self.peek(1).is_number() {
             self.runtime_error("Operands must be numbers.");
@@ -201,6 +228,6 @@ impl VM {
 
     fn read_constant(&mut self) -> Value {
         let byte = self.get_next_byte();
-        self.chunk.constants[byte as usize]
+        self.chunk.constants[byte as usize].clone()
     }
 }

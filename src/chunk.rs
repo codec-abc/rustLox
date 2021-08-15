@@ -80,7 +80,7 @@ impl Chunk {
                 offset + 1
             }
             OpCode::OpConstant => {
-                let constant = self.constants[self.code[offset + 1] as usize];
+                let constant = self.constants[self.code[offset + 1] as usize].clone();
                 println!("OpConstant {}", constant);
                 offset + 2
             }

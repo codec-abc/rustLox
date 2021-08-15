@@ -11,6 +11,7 @@ mod compiler;
 mod chunk;
 mod value;
 mod vm;
+mod object;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -82,6 +83,7 @@ fn repl() {
         let mut s = String::new();
         let read_result = io::stdin().read_line(&mut s);
         if read_result.is_err() {
+            println!("error reading line");
             break;
         } else {
             interpret(&s);
