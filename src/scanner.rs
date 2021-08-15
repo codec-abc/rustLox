@@ -145,7 +145,7 @@ impl Scanner {
             }
 
             _ => { 
-                println!("Unexpected character.");
+                println!("Unexpected character:{}", c);
                 return self.error_token("Unexpected character.");
             }
         }
@@ -257,12 +257,11 @@ impl Scanner {
             let c = self.peek();
             match c {
                 ' ' | '\r' | '\t' => { 
-                    self.advance(); 
+                    self.advance();
                 }
                 '\n' => { 
                     self.line = self.line + 1;
                     self.advance();
-                    break;
                 }
                 '/' => {
                     if self.peek_next() == '/' {
@@ -272,10 +271,10 @@ impl Scanner {
                     } else {
                         return;
                     }
-
-                    break;
                 }
-                _ => { return; }
+                _ => { 
+                    return; 
+                }
             }
         }
     }
