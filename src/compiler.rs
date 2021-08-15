@@ -7,6 +7,7 @@ pub struct Parser {
     panic_mode: bool,
     scanner: Scanner,
     compiling_chunk: Chunk,
+    compiler: Compiler
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -58,6 +59,41 @@ struct ParseRule {
     precedence: Precedence
 }
 
+const UINT8_COUNT: usize = (u8::MAX as usize) + 1;
+const DEFAULT_TOKEN: Token = Token::new_dummy_token();
+const DEFAULT_LOCAL: Local = Local { depth: 0, name: DEFAULT_TOKEN };
+
+struct Compiler {
+    local_count: isize,
+    scope_depth: isize,
+    locals: [Local; UINT8_COUNT],
+}
+
+impl Compiler {
+    fn new() -> Compiler {
+        let array = [DEFAULT_LOCAL; UINT8_COUNT];
+        Compiler {
+            local_count: 0,
+            scope_depth: 0,
+            locals: array,
+        }
+    }
+}
+
+struct Local {
+    name: Token,
+    depth: isize,
+}
+
+impl Default for Local {
+    fn default() -> Self {
+        Local {
+            depth: 0,
+            name: Token::new_dummy_token()
+        }
+    }
+}
+
 impl Parser {
 
     pub fn get_compiling_chunk(self) -> Chunk {
@@ -72,6 +108,7 @@ impl Parser {
             panic_mode: false,
             scanner: Scanner::new(source),
             compiling_chunk: Chunk::new(),
+            compiler: Compiler::new(),
         }
     }
 
@@ -212,12 +249,26 @@ impl Parser {
 
     fn parse_variable(&mut self, message: &str, vm: &mut VM) -> u8 {
         self.consume(TokenType::TokenIdentifier, message);
+        self.declare_variable(vm);
+
+        if self.compiler.scope_depth > 0 {
+            return 0;
+        }
 
         return self.identifier_constant(&self.previous.clone(), vm);
     }
 
     fn define_variable(&mut self, global: u8) {
+        if self.compiler.scope_depth > 0 {
+            self.mark_initialized();
+            return;
+        }
+
         self.emit_bytes(map_opcode_to_binary(OpCode::OpDefineGlobal), global);
+    }
+
+    fn mark_initialized(&mut self) {
+        self.compiler.locals[(self.compiler.local_count - 1) as usize].depth = self.compiler.scope_depth;
     }
 
     fn identifier_constant(&mut self, token: &Token, vm: &mut VM) -> u8 {
@@ -227,6 +278,50 @@ impl Parser {
         let obj = Object::ObjString(obj_string);
         let id = vm.add_object(obj.clone());
         return self.make_constant(Value::Object(id, obj));
+    }
+
+    fn declare_variable(&mut self, vm: &mut VM) {
+        if self.compiler.scope_depth == 0 {
+            return;
+        }
+
+        let name = self.previous.clone();
+        let mut i = self.compiler.local_count - 1;
+
+        while i >= 0 {
+            let local = &self.compiler.locals[i as usize];
+
+            if local.depth != -1isize && local.depth < self.compiler.scope_depth {
+                break;
+            }
+
+            if Parser::identifiers_equal(&name, &local.name) {
+                self.error("Already a variable with this name in this scope.");
+            }
+
+            i = i - 1;
+        }
+
+
+        self.add_local(name, vm);
+    }
+
+    fn identifiers_equal(a: &Token, b: &Token) -> bool {
+        a.content == b.content
+    }
+
+    fn add_local(&mut self, name: Token, vm: &mut VM) {
+
+        if self.compiler.local_count == UINT8_COUNT as isize {
+            self.error("Too many local variables in function.");
+            return;
+        }
+
+        self.compiler.local_count = self.compiler.local_count + 1;
+        let local = &mut self.compiler.locals[self.compiler.local_count as usize];
+
+        local.name = name;
+        local.depth = -1;
     }
 
     fn synchronize(&mut self, _: &mut VM) {
@@ -254,8 +349,35 @@ impl Parser {
     fn statement(&mut self, vm:&mut VM) {
         if self.match_token(TokenType::TokenPrint) {
             self.print_statement(vm);
+        } else if self.match_token(TokenType::TokenLeftBrace) {
+            self.begin_scope();
+            self.block(vm);
+            self.end_scope();
         } else {
             self.expression_statement(vm);
+        }
+    }
+
+    fn block(&mut self, vm:&mut VM) {
+        while ! self.check(TokenType::TokenRightBrace) && !self.check(TokenType::TokenEof) {
+            self.declaration(vm);
+        }
+
+        self.consume(TokenType::TokenRightBrace, "Expect '}' after block.");
+    }
+
+    fn begin_scope(&mut self) {
+        self.compiler.scope_depth = self.compiler.scope_depth + 1;
+    }
+
+    fn end_scope(&mut self) {
+        self.compiler.scope_depth = self.compiler.scope_depth - 1;
+
+        while 
+            self.compiler.local_count > 0 && 
+            self.compiler.locals[(self.compiler.local_count - 1) as usize].depth > self.compiler.scope_depth {
+                self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+                self.compiler.local_count = self.compiler.local_count - 1;
         }
     }
 
@@ -366,12 +488,17 @@ impl Parser {
             return;
         }
       
-        self.run_rule(rule.prefix, vm);
+        let can_assign = precedence <= Precedence::PrecAssignment;
+        self.run_rule(rule.prefix, can_assign, vm);
 
         while precedence <= Parser::get_rule(self.current.token_type).precedence {
             self.advance();
             let infix= Parser::get_rule(self.previous.token_type).infix;
-            self.run_rule(infix, vm);
+            self.run_rule(infix, can_assign, vm);
+        }
+
+        if can_assign && self.match_token(TokenType::TokenEqual) {
+            self.error("Invalid assignment target.");
         }
     }
 
@@ -388,13 +515,43 @@ impl Parser {
         self.emit_constant(value);
     }
 
-    fn variable(&mut self, vm: &mut VM) {
-        self.named_variable(self.previous.clone(), vm);
+    fn variable(&mut self,  can_assign: bool, vm: &mut VM) {
+        self.named_variable(self.previous.clone(), can_assign, vm);
     }
 
-    fn named_variable(&mut self, name: Token, vm: &mut VM) {
-        let arg = self.identifier_constant(&name, vm);
-        self.emit_bytes(map_opcode_to_binary(OpCode::OpGetGlobal), arg);
+    fn named_variable(&mut self, name: Token, can_assign: bool, vm: &mut VM) {
+        let arg = self.resolve_local(&name, vm);
+
+        let (get_op, set_op) = if arg != -1 {
+            (OpCode::OpGetLocal, OpCode::OpSetLocal)
+        } else {
+            (OpCode::OpGetGlobal, OpCode::OpSetGlobal)
+        };
+
+
+        if can_assign && self.match_token(TokenType::TokenEqual) {
+            self.expression(vm);
+            self.emit_bytes(map_opcode_to_binary(set_op), arg as u8);
+        } else {
+            self.emit_bytes(map_opcode_to_binary(get_op), arg as u8);
+        }
+    }
+
+    fn resolve_local(&mut self, name: &Token, vm: &mut VM) -> isize {
+        let mut i = self.compiler.local_count - 1;
+
+        while i >= 0 {
+            let local = &self.compiler.locals[i as usize];
+            if Parser::identifiers_equal(name, &local.name) {
+                if local.depth == -1 {
+                    self.error("Can't read local variable in its own initializer.");
+                }
+                return i;
+            }
+            i = i - 1;
+        }
+
+        -1
     }
 
     fn literal(&mut self, _: &mut VM) {
@@ -406,7 +563,7 @@ impl Parser {
         }
     }
 
-    fn run_rule(&mut self, rule: ParseFn, vm: &mut VM) {
+    fn run_rule(&mut self, rule: ParseFn, can_assign: bool, vm: &mut VM) {
         match rule {
             ParseFn::Binary => { self.binary(vm); },
             ParseFn::Grouping => { self.grouping(vm); },
@@ -414,7 +571,7 @@ impl Parser {
             ParseFn::Unary => { self.unary(vm); },
             ParseFn::Literal => { self.literal(vm); }
             ParseFn::String => { self.string(vm); }
-            ParseFn::Variable => { self.variable(vm); }
+            ParseFn::Variable => { self.variable(can_assign, vm); }
             ParseFn::None => { panic!(); }
         }
     }

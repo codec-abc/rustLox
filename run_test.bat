@@ -1,3 +1,3 @@
 pusdh %~dp0
-cargo run .\tests\test0.lox
+cargo run .\examples\blocks\MultipleNestedBlocks.lox
 popd

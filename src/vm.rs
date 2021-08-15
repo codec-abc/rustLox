@@ -187,6 +187,25 @@ impl VM {
                     let key = maybe_key.unwrap().clone();
                     self.push(key);
                 }
+                OpCode::OpSetGlobal => {
+                    let name = self.read_string();
+                    let value = self.peek(0);
+                    if self.globals.contains_key(&name) {
+                        let existing_value = self.globals.get_mut(&name);
+                        *existing_value.unwrap() = value;
+                    } else {
+                        self.globals.insert(name, value);
+                    }
+                }
+                OpCode::OpGetLocal => {
+                    let slot = self.get_next_byte();
+                    let to_push = self.stack[slot as usize].clone();
+                    self.push(to_push);
+                }
+                OpCode::OpSetLocal => {
+                    let slot = self.get_next_byte();
+                    self.stack[slot as usize] = self.peek(0);
+                }
 
             }
         }
@@ -282,6 +301,7 @@ impl VM {
         map_binary_to_opcode(byte)
     }
 
+    // READ_BYTE
     fn get_next_byte(&mut self) -> u8 {
         let byte = self.chunk.code[self.ip];
         self.ip = self.ip + 1;

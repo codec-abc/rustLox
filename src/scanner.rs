@@ -15,13 +15,13 @@ pub struct Token {
 }
 
 impl Token {
-    pub fn new_dummy_token() -> Token {
+    pub const fn new_dummy_token() -> Token {
         Token {
             token_type: TokenType::TokenNumber,
             start: 0,
             length: 0,
             line: 0,
-            content: "DummyToken".into()
+            content: String::new()
         }
     }
 }
