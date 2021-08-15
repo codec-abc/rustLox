@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use crate::{chunk::{Chunk, OpCode, map_opcode_to_binary}, object::{Object, ObjectString}, scanner::{Scanner, Token, TokenType}, value::Value};
+use crate::{chunk::{Chunk, OpCode, map_opcode_to_binary}, object::{Object, ObjectString}, scanner::{Scanner, Token, TokenType}, value::Value, vm::VM};
 
 pub struct Parser {
     current: Token,
@@ -174,11 +174,11 @@ impl Parser {
         self.error_at(&self.current.clone(), message);
     }
 
-    pub fn compile(&mut self) -> bool {
+    pub fn compile(&mut self, vm: &mut VM) -> bool {
         self.advance();
-        self.expression();
+        self.expression(vm);
         self.consume(TokenType::TokenEof, "Expect end of expression.");
-        self.end_compiler();
+        self.end_compiler(vm);
         return !self.had_error;
     }
 
@@ -205,19 +205,19 @@ impl Parser {
         self.emit_byte(byte2);
     }
 
-    fn end_compiler(&mut self) {
-        self.emit_return();
+    fn end_compiler(&mut self, vm: &mut VM) {
+        self.emit_return(vm);
     }
 
-    fn emit_return(&mut self) {
+    fn emit_return(&mut self, vm: &mut VM) {
         self.emit_byte(map_opcode_to_binary(OpCode::OpReturn));
     }
 
-    fn expression(&mut self) {
-        self.parse_precedence(Precedence::PrecAssignment);
+    fn expression(&mut self, vm: &mut VM) {
+        self.parse_precedence(Precedence::PrecAssignment, vm);
     }
     
-    fn number(&mut self) {
+    fn number(&mut self, vm: &mut VM) {
         let value : f64  = self.previous.content.parse().unwrap();
         self.emit_constant(Value::Number(value));
     }
@@ -237,15 +237,15 @@ impl Parser {
         return constant as u8;
     }
 
-    fn grouping(&mut self) {
-        self.expression();
+    fn grouping(&mut self, vm: &mut VM) {
+        self.expression(vm);
         self.consume(TokenType::TokenRightParen, "Expect ')' after expression.");
     }
 
-    fn unary(&mut self) {
+    fn unary(&mut self, vm: &mut VM) {
         let operator_type: TokenType = self.previous.token_type;
 
-        self.parse_precedence(Precedence::PrecUnary);
+        self.parse_precedence(Precedence::PrecUnary, vm);
 
         match operator_type {
             TokenType::TokenBang => self.emit_byte(map_opcode_to_binary(OpCode::OpNot)),
@@ -254,7 +254,7 @@ impl Parser {
         }
     }
 
-    fn parse_precedence(&mut self, precedence: Precedence) {
+    fn parse_precedence(&mut self, precedence: Precedence, vm: &mut VM) {
         self.advance();
         let rule = Parser::get_rule(self.previous.token_type);
 
@@ -263,26 +263,27 @@ impl Parser {
             return;
         }
       
-        self.run_rule(rule.prefix);
+        self.run_rule(rule.prefix, vm);
 
         while precedence <= Parser::get_rule(self.current.token_type).precedence {
             self.advance();
             let infix= Parser::get_rule(self.previous.token_type).infix;
-            self.run_rule(infix);
+            self.run_rule(infix, vm);
         }
     }
 
-    fn string(&mut self) {
+    fn string(&mut self, vm: &mut VM) {
         let mut previous_str = self.previous.content.clone();
         previous_str.remove(0);
         previous_str.remove(previous_str.len() - 1);
-        let string = Box::new(previous_str);
-        let string_obj = ObjectString { string: Rc::new(string) };
-        let value= Value::Object(Object::ObjString(string_obj));
+        let string_obj = ObjectString::new(&previous_str);
+        let obj = Rc::new(Object::ObjString(string_obj));
+        vm.add_object(obj.clone());
+        let value = Value::Object(obj);
         self.emit_constant(value);
     }
 
-    fn literal(&mut self) {
+    fn literal(&mut self, vm: &mut VM) {
         match self.previous.token_type {
             TokenType::TokenFalse => { self.emit_byte(map_opcode_to_binary(OpCode::OpFalse)); }
             TokenType::TokenNil => { self.emit_byte(map_opcode_to_binary(OpCode::OpNil)); }
@@ -291,24 +292,24 @@ impl Parser {
         }
     }
 
-    fn run_rule(&mut self, rule: ParseFn) {
+    fn run_rule(&mut self, rule: ParseFn, vm: &mut VM) {
         match rule {
-            ParseFn::Binary => { self.binary(); },
-            ParseFn::Grouping => { self.grouping(); },
-            ParseFn::Number => { self.number(); },
-            ParseFn::Unary => { self.unary(); },
-            ParseFn::Literal => { self.literal(); }
-            ParseFn::String => { self.string(); }
+            ParseFn::Binary => { self.binary(vm); },
+            ParseFn::Grouping => { self.grouping(vm); },
+            ParseFn::Number => { self.number(vm); },
+            ParseFn::Unary => { self.unary(vm); },
+            ParseFn::Literal => { self.literal(vm); }
+            ParseFn::String => { self.string(vm); }
             ParseFn::None => { panic!(); }
         }
     }
 
-    fn binary(&mut self) {
+    fn binary(&mut self, vm: &mut VM) {
         let operator_type: TokenType = self.previous.token_type;
 
         let rule= Parser::get_rule(operator_type);
 
-        self.parse_precedence(get_next_rule(rule.precedence));
+        self.parse_precedence(get_next_rule(rule.precedence), vm);
 
         match operator_type {
             TokenType::TokenBangEqual => self.emit_bytes(map_opcode_to_binary(OpCode::OpEqual), map_opcode_to_binary(OpCode::OpNot)),

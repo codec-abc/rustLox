@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{collections::HashMap, rc::Rc};
 
 use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, compiler::Parser, object::{Object, ObjectString}, value::{Value, print_value, values_equal}};
 
@@ -17,6 +17,7 @@ pub struct VM {
     ip: usize,
     stack: [Value; STACK_MAX],
     stack_top: usize,
+    objects: Vec<Rc<Object>>,
 }
 
 fn is_falsey(value: Value) -> bool {
@@ -32,6 +33,7 @@ impl VM {
             ip: 0,
             stack: array,
             stack_top: 0,
+            objects: vec!(),
         }
     }
 
@@ -43,7 +45,7 @@ impl VM {
         
         let mut parser = Parser::new(source);
 
-        if !parser.compile() {
+        if !parser.compile( self) {
             return InterpretResult::InterpretCompileError;
         }
 
@@ -164,12 +166,18 @@ impl VM {
         let a_str = a_obj.as_string();
 
         let mut c = String::new();
-        c.push_str(&*a_str.string);
-        c.push_str(&*b_str.string);
+        c.push_str(a_str.str());
+        c.push_str(b_str.str());
 
-        let str_obj = ObjectString { string : Rc::new(Box::new(c)) };
+        let str_obj = ObjectString::new(&c);
+        let object = Rc::new(Object::ObjString(str_obj));
+        self.add_object(object.clone());
 
-        self.push(Value::Object(Object::ObjString(str_obj)));
+        self.push(Value::Object(object));
+    }
+
+    pub fn add_object(&mut self, object: Rc<Object>) {
+        self.objects.push(object);
     }
 
     fn binary_op(&mut self, opcode: OpCode) -> InterpretResult {

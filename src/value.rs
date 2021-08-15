@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, rc::Rc};
 
 use crate::object::Object;
 
@@ -6,7 +6,7 @@ use crate::object::Object;
 pub enum Value {
     Boolean(bool),
     Number(f64),
-    Object(Object),
+    Object(Rc<Object>),
     Nil,
 }
 
