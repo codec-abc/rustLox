@@ -345,6 +345,12 @@ impl VM {
             }
         }
         println!("================================================");
+        println!("VM contains {} strings", self.strings.strings.len());
+        for (_, string) in self.strings.strings.iter() {
+            println!("VM String: {}", string);
+        }
+
+        println!("================================================");
         println!("VM contains {} globals", self.globals.len());
         for (key, value) in self.globals.iter() {
             println!("object {:?} has key {:?}", key, value);
