@@ -272,4 +272,20 @@ impl VM {
         let byte = self.get_next_byte();
         self.chunk.constants[byte as usize].clone()
     }
+
+    pub fn dump_stats(&self) {
+        println!("================================================");
+        println!("VM contains {} objects", self.objects.len());
+        for object in self.objects.iter() {
+            let inner_obj = object.as_ref();
+            println!("object is {:?}", inner_obj);
+        }
+        println!("================================================");
+        println!("VM contains {} globals", self.globals.len());
+        for object in self.objects.iter() {
+            let inner_obj = object.as_ref();
+            println!("object is {:?}", inner_obj);
+        }
+        println!("================================================");
+    }
 }

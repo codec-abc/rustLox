@@ -64,5 +64,7 @@ fn repl() {
 fn interpret(code: &str)  -> InterpretResult {
     let chunk = Chunk::new();
     let mut vm = VM::new(chunk);
-    vm.interpret(code)
+    let result = vm.interpret(code);
+    vm.dump_stats();
+    result
 }
