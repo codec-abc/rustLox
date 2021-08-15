@@ -297,7 +297,7 @@ impl VM {
         self.strings.strings.get(*index).unwrap()
     }
 
-    pub fn get_index_from_string(&self, string: &str) -> Option<&Index> {
+    fn get_index_from_string(&self, string: &str) -> Option<&Index> {
         self.strings.string_to_index.get(string)
     }
 
