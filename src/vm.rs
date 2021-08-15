@@ -282,9 +282,8 @@ impl VM {
         }
         println!("================================================");
         println!("VM contains {} globals", self.globals.len());
-        for object in self.objects.iter() {
-            let inner_obj = object.as_ref();
-            println!("object is {:?}", inner_obj);
+        for (key, value) in self.globals.iter() {
+            println!("object {:?} has key {:?}", key, value);
         }
         println!("================================================");
     }
