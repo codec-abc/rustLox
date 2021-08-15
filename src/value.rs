@@ -1,6 +1,6 @@
 use std::{fmt::Display, rc::Rc};
 
-use crate::object::Object;
+use crate::object::{Object, print_object};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
@@ -90,5 +90,10 @@ impl std::fmt::Display for Value {
 }
 
 pub fn print_value(value: Value) {
-    println!("{:?}", value);
+    match value {
+        Value::Boolean(b) => println!("{}", b),
+        Value::Nil => println!("nil"),
+        Value::Number(n) => println!("{}", n),
+        Value::Object(o) => print_object(&o),
+    }
 }

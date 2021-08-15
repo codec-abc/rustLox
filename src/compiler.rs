@@ -176,10 +176,41 @@ impl Parser {
 
     pub fn compile(&mut self, vm: &mut VM) -> bool {
         self.advance();
-        self.expression(vm);
-        self.consume(TokenType::TokenEof, "Expect end of expression.");
+
+        while !self.match_token(TokenType::TokenEof) {
+            self.declaration(vm);
+        }
+
         self.end_compiler(vm);
         return !self.had_error;
+    }
+
+    fn declaration(&mut self, vm: &mut VM) {
+        self.statement(vm)
+    }
+
+    fn statement(&mut self, vm:&mut VM) {
+        if self.match_token(TokenType::TokenPrint) {
+            self.print_statement(vm);
+        }
+    }
+
+    fn match_token(&mut self, token_type: TokenType) -> bool {
+        if !self.check(token_type) {
+            return false;
+        }
+        self.advance();
+        true
+    }
+
+    fn check(&mut self, token_type: TokenType) -> bool {
+        self.current.token_type == token_type
+    }
+
+    fn print_statement(&mut self, vm:&mut VM) {
+        self.expression(vm);
+        self.consume(TokenType::TokenSemicolon, "Expect ';' after value.");
+        self.emit_byte(map_opcode_to_binary(OpCode::OpPrint));
     }
 
     fn consume(&mut self, token_type: TokenType, message: &str) {

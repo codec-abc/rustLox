@@ -29,6 +29,12 @@ pub enum Object {
     ObjString(ObjectString),
 }
 
+pub fn print_object(object: &Object) {
+    match &object {
+        Object::ObjString(a) => println!("{}", &*a.string) ,
+    }
+}
+
 // pub fn hash_string(key: &str) -> u32 {
 //     let mut hash = 2166136261u32;
 //     let key_bytes = key.as_bytes();

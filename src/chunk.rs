@@ -16,6 +16,7 @@ pub enum OpCode {
     OpNot = 11,
     OpNegate = 12,
     OpReturn = 13,
+    OpPrint = 14,
 }
 
 pub struct Chunk {
@@ -131,6 +132,10 @@ impl Chunk {
             }
             OpCode::OpLess => {
                 println!("OpLess");
+                offset + 1
+            }
+            OpCode::OpPrint => {
+                println!("OpPrint");
                 offset + 1
             }
         }

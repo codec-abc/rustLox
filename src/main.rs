@@ -25,36 +25,6 @@ fn main() {
         println!("Usage: rustLox [path]");
         exit(64);
     }
-
-    // let mut chunk = Chunk::new();
-
-    // chunk.write_chunk(map_opcode_to_binary(OpCode::OpConstant), 123);
-    // let constant_index = chunk.add_constant(1.2);
-    // chunk.write_chunk(constant_index as u8, 123);
-
-    // chunk.write_chunk(map_opcode_to_binary(OpCode::OpConstant), 123);
-    // let constant_index = chunk.add_constant(3.4);
-    // chunk.write_chunk(constant_index as u8, 123);
-
-    // chunk.write_chunk(map_opcode_to_binary(OpCode::OpAdd), 123);
-
-    // let constant_index = chunk.add_constant(5.6);
-    // chunk.write_chunk(map_opcode_to_binary(OpCode::OpConstant), 123);
-    // chunk.write_chunk( constant_index as u8, 123);
-
-    // chunk.write_chunk( map_opcode_to_binary(OpCode::OpDivide), 123);
-
-
-    // chunk.write_chunk(map_opcode_to_binary(OpCode::OpNegate), 123);
-    // chunk.write_chunk(map_opcode_to_binary(OpCode::OpReturn), 123);
-
-    // chunk.disassemble_chunk("test chunk");
-
-    // let mut vm = VM::new(chunk);
-
-    // let result = vm.interpret();
-
-    //println!("{:?}", result);
 }
 
 fn run_file(path: &str) {

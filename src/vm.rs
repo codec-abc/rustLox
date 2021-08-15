@@ -74,7 +74,7 @@ impl VM {
             let instruction = self.read_instruction();
             match instruction {
                 OpCode::OpReturn => {
-                    print_value(self.pop());
+                    //print_value(self.pop());
                     return InterpretResult::InterpretOk;
                 }
                 OpCode::OpConstant => {
@@ -143,6 +143,10 @@ impl VM {
                     if result != InterpretResult::InterpretOk {
                         return result;
                     }
+                }
+                OpCode::OpPrint => {
+                    print_value(self.pop());
+                    println!("");
                 }
 
             }
