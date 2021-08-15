@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::{chunk::{Chunk, OpCode, map_opcode_to_binary}, object::{Object, ObjectString}, scanner::{Scanner, Token, TokenType}, value::Value, vm::VM};
 
 pub struct Parser {
@@ -231,7 +229,7 @@ impl Parser {
         return self.make_constant(Value::Object(id, obj));
     }
 
-    fn synchronize(&mut self, vm: &mut VM) {
+    fn synchronize(&mut self, _: &mut VM) {
         self.panic_mode = false;
 
         while self.current.token_type != TokenType::TokenEof {
@@ -314,7 +312,7 @@ impl Parser {
         self.emit_return(vm);
     }
 
-    fn emit_return(&mut self, vm: &mut VM) {
+    fn emit_return(&mut self, _: &mut VM) {
         self.emit_byte(map_opcode_to_binary(OpCode::OpReturn));
     }
 
@@ -322,7 +320,7 @@ impl Parser {
         self.parse_precedence(Precedence::PrecAssignment, vm);
     }
     
-    fn number(&mut self, vm: &mut VM) {
+    fn number(&mut self, _: &mut VM) {
         let value : f64  = self.previous.content.parse().unwrap();
         self.emit_constant(Value::Number(value));
     }
@@ -399,7 +397,7 @@ impl Parser {
         self.emit_bytes(map_opcode_to_binary(OpCode::OpGetGlobal), arg);
     }
 
-    fn literal(&mut self, vm: &mut VM) {
+    fn literal(&mut self, _: &mut VM) {
         match self.previous.token_type {
             TokenType::TokenFalse => { self.emit_byte(map_opcode_to_binary(OpCode::OpFalse)); }
             TokenType::TokenNil => { self.emit_byte(map_opcode_to_binary(OpCode::OpNil)); }

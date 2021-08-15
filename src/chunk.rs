@@ -50,17 +50,16 @@ impl Chunk {
         self.lines.push(line);
     }
 
-    pub fn free_chunk(&mut self) {
-        self.code = vec!();
-    }
+    // pub fn free_chunk(&mut self) {
+    //     self.code = vec!();
+    // }
 
     pub fn add_constant(&mut self, value: Value) -> usize {
         self.constants.push(value);
         return self.constants.len() - 1;
     }
 
-    pub fn disassemble_chunk(&mut self, name: &str) {
-        println!("== {} ==", name);
+    pub fn disassemble_chunk(&mut self) {
         let mut offset = 0;
         while offset < self.code.len() {
             let instruction = self.code[offset];

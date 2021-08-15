@@ -34,14 +34,12 @@ impl Object {
     pub fn is_string(&self) -> bool {
         match &self {
             Self::ObjString(_) => { true }
-            _ => { false }
         }
     }
 
     pub fn as_string(&self) -> &ObjectString {
         match &self {
             Self::ObjString(a) => { return a },
-            _ => panic!("try to cast a non string obj"),
         }
     }
 }

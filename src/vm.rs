@@ -331,7 +331,7 @@ impl VM {
         let _ = self.strings.string_to_index.remove_entry(string.into());
     }
 
-    pub fn dump_stats(&self) {
+    pub fn dump_stats(&mut self) {
         println!("================================================");
         println!("VM contains {} objects", self.objects.len());
         for (_, object) in self.objects.iter() {
@@ -356,5 +356,8 @@ impl VM {
             println!("object {:?} has key {:?}", key, value);
         }
         println!("================================================");
+
+
+        self.chunk.disassemble_chunk();
     }
 }
