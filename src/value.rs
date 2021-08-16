@@ -1,12 +1,12 @@
 use generational_arena::Index;
 
-use crate::{object::{Object, print_object}, vm::VM};
+use crate::{object::{Object}, vm::VM};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Value {
     Boolean(bool),
     Number(f64),
-    Object(Index, Object), //object id
+    Object(Index, Object),
     Nil,
 }
 
@@ -83,6 +83,6 @@ pub fn print_value(value: Value, vm: &VM) {
         Value::Boolean(b) => println!("{}", b),
         Value::Nil => println!("nil"),
         Value::Number(n) => println!("{}", n),
-        Value::Object(_, o) => print_object(&o, vm),
+        Value::Object(id, o) => vm.print_object(&id, &o),
     }
 }

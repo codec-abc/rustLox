@@ -15,14 +15,16 @@ const INIT: Value = Value::Nil;
 
 struct VMString {
     pub strings: Arena<String>,
-    pub string_to_index: HashMap<String, Index>,
+    pub string_to_string_index: HashMap<String, Index>,
+    pub string_to_string_obj: HashMap<String, Index>
 }
 
 impl VMString {
     pub fn new() -> VMString {
         VMString {
             strings: Arena::new(),
-            string_to_index: HashMap::new(),
+            string_to_string_index: HashMap::new(),
+            string_to_string_obj: HashMap::new(),
         }
     }
 }
@@ -238,17 +240,11 @@ impl VM {
         c.push_str(self.get_string_from_index(&a_str.id()));
         c.push_str(self.get_string_from_index(&b_str.id()));
 
-        let id = self.get_or_create_string(&c);
+        //let id = self.get_or_create_string(&c);
 
-        let object = Object::ObjString(ObjectString::new(id));
-        let index = self.add_object(object.clone());
-
-        self.push(Value::Object(index, object));
-    }
-
-    pub fn add_object(&mut self, object: Object) -> Index {
-        let index = self.objects.insert(object);
-        index
+        //let object = Object::ObjString(ObjectString::new(id));
+        let object = self.get_or_create_string_object(&c);
+        self.push(object);
     }
 
     fn binary_op(&mut self, opcode: OpCode) -> InterpretResult {
@@ -312,42 +308,78 @@ impl VM {
         self.chunk.constants[byte as usize].clone()
     }
 
-    pub fn get_string_from_index(&self, index: &Index) -> &String {
+    fn get_string_from_index(&self, index: &Index) -> &String {
         self.strings.strings.get(*index).unwrap()
     }
 
     fn get_index_from_string(&self, string: &str) -> Option<&Index> {
-        self.strings.string_to_index.get(string)
+        self.strings.string_to_string_index.get(string)
     }
 
-    pub fn create_new_string(&mut self, string: &str) -> Index {
-        if self.strings.string_to_index.contains_key(string) {
+    fn create_new_string(&mut self, string: &str) -> Index {
+        if self.strings.string_to_string_index.contains_key(string) {
             panic!("Avoid duplication of strings");
         }
 
         let id = self.strings.strings.insert(string.into());
-        self.strings.string_to_index.insert(string.into(), id);
+        self.strings.string_to_string_index.insert(string.into(), id);
         id
     }
 
-    pub fn get_or_create_string(&mut self, string: &str) -> Index {
+    fn get_or_create_string(&mut self, string: &str) -> (Index, bool) {
 
+        let mut created = false;
         let id = self.get_index_from_string(string);
 
         let id = if id.is_some() {
             id.unwrap().clone()
         } else {
-            self.create_new_string(string)
+            let id = self.create_new_string(string);
+            created = true;
+            id
         };
 
-        id
+        (id, created)
+    }
+
+    fn create_new_obj_with_existing_string(&mut self, string_index: Index) -> Index {
+        let object = Object::ObjString(ObjectString::new(string_index));
+        let object_index = self.objects.insert(object);
+        object_index
+    }
+
+    pub fn get_or_create_string_object(&mut self, string: &str) -> Value { //::Object(id, obj)
+        let (string_id, was_string_created) = self.get_or_create_string(string);
+
+        let obj_index = 
+            if was_string_created {
+                self.create_new_obj_with_existing_string(string_id)
+            } else {
+                let id = self.strings.string_to_string_obj.get(string);
+                id.unwrap().clone()
+            };
+
+        if was_string_created {
+            self.strings.string_to_string_obj.insert(string.into(), obj_index.clone());
+        }
+
+        let obj_string = ObjectString::new(string_id.clone());
+        let obj = Object::ObjString(obj_string);
+        Value::Object(obj_index, obj)
     }
 
     pub fn remove_string(&mut self, string: &str) {
-        let id = self.strings.string_to_index.get(string.into()).unwrap();
+        let id = self.strings.string_to_string_index.get(string.into()).unwrap();
         self.strings.strings.remove(*id);
+        self.strings.string_to_string_obj.remove_entry(string);
 
-        let _ = self.strings.string_to_index.remove_entry(string.into());
+        let _ = self.strings.string_to_string_index.remove_entry(string.into());
+    }
+
+    pub fn print_object(&self, _: &Index, o: &Object) {
+        match o {
+            Object::ObjString(a) => println!("{}", self.get_string_from_index(a.id())) ,
+        }
     }
 
     pub fn dump_stats(&mut self) {

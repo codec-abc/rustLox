@@ -1,7 +1,5 @@
 use generational_arena::Index;
 
-use crate::vm::VM;
-
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ObjectString { 
     id: Index,
@@ -22,12 +20,6 @@ impl ObjectString {
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Object {
     ObjString(ObjectString),
-}
-
-pub fn print_object(object: &Object, vm: &VM) {
-    match &object {
-        Object::ObjString(a) => println!("{}", vm.get_string_from_index(a.id())) ,
-    }
 }
 
 impl Object {

@@ -1,4 +1,4 @@
-use crate::{chunk::{Chunk, OpCode, map_opcode_to_binary}, object::{Object, ObjectString}, scanner::{Scanner, Token, TokenType}, value::Value, vm::VM};
+use crate::{chunk::{Chunk, OpCode, map_opcode_to_binary}, scanner::{Scanner, Token, TokenType}, value::Value, vm::VM};
 
 pub struct Parser {
     current: Token,
@@ -272,12 +272,8 @@ impl Parser {
     }
 
     fn identifier_constant(&mut self, token: &Token, vm: &mut VM) -> u8 {
-        let id = vm.get_or_create_string(&token.content);
-        let obj_string = ObjectString::new(id.clone());
-
-        let obj = Object::ObjString(obj_string);
-        let id = vm.add_object(obj.clone());
-        return self.make_constant(Value::Object(id, obj));
+        let obj = vm.get_or_create_string_object(&token.content);
+        return self.make_constant(obj);
     }
 
     fn declare_variable(&mut self, vm: &mut VM) {
@@ -507,11 +503,8 @@ impl Parser {
         previous_str.remove(0);
         previous_str.remove(previous_str.len() - 1);
 
-        let id = vm.get_or_create_string(&previous_str);
-        let string_obj = ObjectString::new(id);
-        let obj = Object::ObjString(string_obj);
-        let index = vm.add_object(obj.clone());
-        let value = Value::Object(index, obj);
+        let value = vm.get_or_create_string_object(&previous_str);
+
         self.emit_constant(value);
     }
 
