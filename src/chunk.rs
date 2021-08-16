@@ -74,11 +74,11 @@ impl Chunk {
     fn disassemble_instruction(&self, instruction: u8, offset: usize) -> usize {
         print!("{:#06x?} ", offset);
 
-        if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
-            print!("   | ");
-        } else {
-            print!("{} ", self.lines[offset]);
-        }
+        // if offset > 0 && self.lines[offset] == self.lines[offset - 1] {
+        //     print!("   | ");
+        // } else {
+        //     print!("{} ", self.lines[offset]);
+        // }
 
         let parsed_instruction = map_binary_to_opcode(instruction);
         match parsed_instruction {
@@ -87,8 +87,8 @@ impl Chunk {
                 offset + 1
             }
             OpCode::OpConstant => {
-                let constant = self.constants[self.code[offset + 1] as usize].clone();
-                println!("OpConstant {:?}", constant);
+                //let constant = self.constants[self.code[offset + 1] as usize].clone();
+                println!("OpConstant");
                 offset + 2
             }
             OpCode::OpNegate => {
@@ -150,23 +150,23 @@ impl Chunk {
             }
             OpCode::OpDefineGlobal => {
                 println!("OpDefineGlobal");
-                offset + 1
+                offset + 2
             }
             OpCode::OpGetGlobal => {
                 println!("OpGetGlobal");
-                offset + 1
+                offset + 2
             }
             OpCode::OpSetGlobal => {
                 println!("OpSetGlobal");
-                offset + 1
+                offset + 2
             }
             OpCode::OpSetLocal => {
                 println!("OpSetLocal");
-                offset + 1
+                offset + 2
             }
             OpCode::OpGetLocal => {
                 println!("OpGetLocal");
-                offset + 1
+                offset + 2
             }
         }
     }

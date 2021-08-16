@@ -409,6 +409,6 @@ impl VM {
         println!("================================================");
 
 
-        //self.chunk.disassemble_chunk();
+        self.chunk.disassemble_chunk();
     }
 }
