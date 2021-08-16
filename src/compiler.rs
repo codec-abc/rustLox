@@ -529,8 +529,6 @@ impl Parser {
             (OpCode::OpGetGlobal, OpCode::OpSetGlobal)
         };
 
-        let is_global = arg != 1;
-
         if can_assign && self.match_token(TokenType::TokenEqual) {
             self.expression(vm);
             self.emit_bytes(map_opcode_to_binary(set_op), arg as u8);

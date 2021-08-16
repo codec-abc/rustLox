@@ -165,7 +165,6 @@ impl VM {
                 }
                 OpCode::OpPrint => {
                     print_value(self.pop(), &self);
-                    println!("");
                 }
                 OpCode::OpPop => {
                     self.pop();
