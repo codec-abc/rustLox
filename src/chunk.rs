@@ -1,4 +1,4 @@
-use crate::value::Value;
+use crate::value::{Value};
 
 #[derive(Debug, Clone, FromPrimitive, ToPrimitive)]
 pub enum OpCode {
@@ -58,6 +58,7 @@ impl Chunk {
     // }
 
     pub fn add_constant(&mut self, value: Value) -> usize {
+        //println!("adding constant: {:?}", value);
         self.constants.push(value);
         return self.constants.len() - 1;
     }

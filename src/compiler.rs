@@ -310,15 +310,15 @@ impl Parser {
         a.content == b.content
     }
 
-    fn add_local(&mut self, name: Token, vm: &mut VM) {
+    fn add_local(&mut self, name: Token, _: &mut VM) {
 
         if self.compiler.local_count == UINT8_COUNT as isize {
             self.error("Too many local variables in function.");
             return;
         }
 
-        self.compiler.local_count = self.compiler.local_count + 1;
         let local = &mut self.compiler.locals[self.compiler.local_count as usize];
+        self.compiler.local_count = self.compiler.local_count + 1;
 
         local.name = name;
         local.depth = -1;
@@ -520,14 +520,16 @@ impl Parser {
     }
 
     fn named_variable(&mut self, name: Token, can_assign: bool, vm: &mut VM) {
-        let arg = self.resolve_local(&name, vm);
+        let mut arg = self.resolve_local(&name, vm);
 
         let (get_op, set_op) = if arg != -1 {
             (OpCode::OpGetLocal, OpCode::OpSetLocal)
         } else {
+            arg = self.identifier_constant(&name, vm) as isize;
             (OpCode::OpGetGlobal, OpCode::OpSetGlobal)
         };
 
+        let is_global = arg != 1;
 
         if can_assign && self.match_token(TokenType::TokenEqual) {
             self.expression(vm);
@@ -537,7 +539,7 @@ impl Parser {
         }
     }
 
-    fn resolve_local(&mut self, name: &Token, vm: &mut VM) -> isize {
+    fn resolve_local(&mut self, name: &Token, _: &mut VM) -> isize {
         let mut i = self.compiler.local_count - 1;
 
         while i >= 0 {
