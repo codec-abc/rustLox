@@ -1,7 +1,12 @@
-use std::{collections::HashMap};
 use generational_arena::{Arena, Index};
+use std::collections::HashMap;
 
-use crate::{chunk::{Chunk, OpCode, map_binary_to_opcode}, compiler::Parser, object::{Object, ObjectString}, value::{Value, print_value, values_equal}};
+use crate::{
+    chunk::{map_binary_to_opcode, Chunk, OpCode},
+    compiler::Parser,
+    object::{Object, ObjectString},
+    value::{print_value, values_equal, Value},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InterpretResult {
@@ -16,7 +21,7 @@ const INIT: Value = Value::Nil;
 struct VMString {
     pub strings: Arena<String>,
     pub string_to_string_index: HashMap<String, Index>,
-    pub string_to_string_obj: HashMap<String, Index>
+    pub string_to_string_obj: HashMap<String, Index>,
 }
 
 impl VMString {
@@ -36,7 +41,7 @@ pub struct VM {
     stack_top: usize,
     objects: Arena<Object>,
     globals: HashMap<String, Value>,
-    strings: VMString
+    strings: VMString,
 }
 
 fn is_falsey(value: Value) -> bool {
@@ -44,7 +49,6 @@ fn is_falsey(value: Value) -> bool {
 }
 
 impl VM {
-
     pub fn new(chunk: Chunk) -> VM {
         let array = [INIT; STACK_MAX];
         VM {
@@ -63,10 +67,9 @@ impl VM {
     }
 
     pub fn interpret(&mut self, source: &str) -> InterpretResult {
-        
         let mut parser = Parser::new(source);
 
-        if !parser.compile( self) {
+        if !parser.compile(self) {
             return InterpretResult::InterpretCompileError;
         }
 
@@ -87,7 +90,7 @@ impl VM {
     }
 
     fn peek(&self, distance: usize) -> Value {
-        self.stack[self.stack_top -1 - distance].clone()
+        self.stack[self.stack_top - 1 - distance].clone()
     }
 
     fn run(&mut self) -> InterpretResult {
@@ -107,7 +110,7 @@ impl VM {
                     self.push(Value::Boolean(is_falsey(popped)))
                 }
                 OpCode::OpNegate => {
-                    if ! self.peek(0).is_number() {
+                    if !self.peek(0).is_number() {
                         self.runtime_error("Operand must be a number.");
                         return InterpretResult::InterpretRuntimeError;
                     }
@@ -207,9 +210,30 @@ impl VM {
                     let slot = self.get_next_byte();
                     self.stack[slot as usize] = self.peek(0);
                 }
-
+                OpCode::OpJumpIfFalse => {
+                    let offset = self.read_short();
+                    if is_falsey(self.peek(0)) {
+                        self.ip = self.ip + (offset as usize);
+                    }
+                },
+                OpCode::OpJump => {
+                    let offset = self.read_short();
+                    self.ip = self.ip + offset as usize;
+                }
+                OpCode::OpLoop => {
+                    let offset = self.read_short();
+                    self.ip = self.ip - offset as usize;
+                }
             }
         }
+    }
+
+
+    fn read_short(&mut self) -> u16 {
+        self.ip = self.ip + 2;
+        let a = (self.chunk.code[self.ip - 2] as u16) << 8;
+        let b = self.chunk.code[self.ip - 1] as u16;
+        a | b
     }
 
     fn read_string(&mut self) -> String {
@@ -236,7 +260,7 @@ impl VM {
         let a_str = a_obj.as_string();
 
         let mut c = String::new();
-        
+
         c.push_str(self.get_string_from_index(&a_str.id()));
         c.push_str(self.get_string_from_index(&b_str.id()));
 
@@ -248,7 +272,6 @@ impl VM {
     }
 
     fn binary_op(&mut self, opcode: OpCode) -> InterpretResult {
-
         if self.peek(0).is_string() && self.peek(1).is_string() {
             self.concatenate();
             return InterpretResult::InterpretOk;
@@ -263,25 +286,13 @@ impl VM {
         let a = self.pop().as_number();
 
         let result = match opcode {
-            OpCode::OpAdd => {
-                Value::Number(a + b)
-            }
-            OpCode::OpSubtract => {
-                Value::Number(a - b)
-            }
-            OpCode::OpMultiply => {
-                Value::Number(a * b)
-            }
-            OpCode::OpDivide => {
-                Value::Number(a / b)
-            }
-            OpCode::OpGreater => {
-                Value::Boolean(a > b)
-            }
-            OpCode::OpLess => {
-                Value::Boolean(a < b)
-            }
-            _ => { 
+            OpCode::OpAdd => Value::Number(a + b),
+            OpCode::OpSubtract => Value::Number(a - b),
+            OpCode::OpMultiply => Value::Number(a * b),
+            OpCode::OpDivide => Value::Number(a / b),
+            OpCode::OpGreater => Value::Boolean(a > b),
+            OpCode::OpLess => Value::Boolean(a < b),
+            _ => {
                 unimplemented!("binary op not implemented");
             }
         };
@@ -322,12 +333,13 @@ impl VM {
         }
 
         let id = self.strings.strings.insert(string.into());
-        self.strings.string_to_string_index.insert(string.into(), id);
+        self.strings
+            .string_to_string_index
+            .insert(string.into(), id);
         id
     }
 
     fn get_or_create_string(&mut self, string: &str) -> (Index, bool) {
-
         let mut created = false;
         let id = self.get_index_from_string(string);
 
@@ -348,19 +360,21 @@ impl VM {
         object_index
     }
 
-    pub fn get_or_create_string_object(&mut self, string: &str) -> Value { //::Object(id, obj)
+    pub fn get_or_create_string_object(&mut self, string: &str) -> Value {
+        //::Object(id, obj)
         let (string_id, was_string_created) = self.get_or_create_string(string);
 
-        let obj_index = 
-            if was_string_created {
-                self.create_new_obj_with_existing_string(string_id)
-            } else {
-                let id = self.strings.string_to_string_obj.get(string);
-                id.unwrap().clone()
-            };
+        let obj_index = if was_string_created {
+            self.create_new_obj_with_existing_string(string_id)
+        } else {
+            let id = self.strings.string_to_string_obj.get(string);
+            id.unwrap().clone()
+        };
 
         if was_string_created {
-            self.strings.string_to_string_obj.insert(string.into(), obj_index.clone());
+            self.strings
+                .string_to_string_obj
+                .insert(string.into(), obj_index.clone());
         }
 
         let obj_string = ObjectString::new(string_id.clone());
@@ -369,16 +383,23 @@ impl VM {
     }
 
     pub fn remove_string(&mut self, string: &str) {
-        let id = self.strings.string_to_string_index.get(string.into()).unwrap();
+        let id = self
+            .strings
+            .string_to_string_index
+            .get(string.into())
+            .unwrap();
         self.strings.strings.remove(*id);
         self.strings.string_to_string_obj.remove_entry(string);
 
-        let _ = self.strings.string_to_string_index.remove_entry(string.into());
+        let _ = self
+            .strings
+            .string_to_string_index
+            .remove_entry(string.into());
     }
 
     pub fn print_object(&self, _: &Index, o: &Object) {
         match o {
-            Object::ObjString(a) => println!("{}", self.get_string_from_index(a.id())) ,
+            Object::ObjString(a) => println!("{}", self.get_string_from_index(a.id())),
         }
     }
 
@@ -391,7 +412,7 @@ impl VM {
                 Object::ObjString(str_obj) => {
                     let id = str_obj.id();
                     let str = self.strings.strings.get(*id).unwrap();
-                    println!("In particular, object is a string: {}", str); 
+                    println!("In particular, object is a string: {}", str);
                 }
             }
         }
@@ -407,7 +428,6 @@ impl VM {
             println!("object {:?} has key {:?}", key, value);
         }
         println!("================================================");
-
 
         self.chunk.disassemble_chunk();
     }

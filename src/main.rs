@@ -1,17 +1,21 @@
 #[macro_use]
 extern crate num_derive;
 
-use std::{env, fs, io::{self, Write}, process::exit};
+use std::{
+    env, fs,
+    io::{self, Write},
+    process::exit,
+};
 
-use chunk::{Chunk};
+use chunk::Chunk;
 use vm::{InterpretResult, VM};
 
-mod scanner;
-mod compiler;
 mod chunk;
+mod compiler;
+mod object;
+mod scanner;
 mod value;
 mod vm;
-mod object;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -30,7 +34,11 @@ fn main() {
 fn run_file(path: &str) {
     let read_result = fs::read_to_string(path);
     if read_result.is_err() {
-        println!("Could not read file {} because {:?}", path, read_result.err().unwrap());
+        println!(
+            "Could not read file {} because {:?}",
+            path,
+            read_result.err().unwrap()
+        );
         exit(74);
     }
     let str = read_result.unwrap();
@@ -57,14 +65,14 @@ fn repl() {
             break;
         } else {
             interpret(&s);
-        }  
+        }
     }
 }
 
-fn interpret(code: &str)  -> InterpretResult {
+fn interpret(code: &str) -> InterpretResult {
     let chunk = Chunk::new();
     let mut vm = VM::new(chunk);
     let result = vm.interpret(code);
-    vm.dump_stats();
+    //vm.dump_stats();
     result
 }

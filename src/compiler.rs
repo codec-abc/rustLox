@@ -1,4 +1,9 @@
-use crate::{chunk::{Chunk, OpCode, map_opcode_to_binary}, scanner::{Scanner, Token, TokenType}, value::Value, vm::VM};
+use crate::{
+    chunk::{map_opcode_to_binary, Chunk, OpCode},
+    scanner::{Scanner, Token, TokenType},
+    value::Value,
+    vm::VM,
+};
 
 pub struct Parser {
     current: Token,
@@ -7,22 +12,22 @@ pub struct Parser {
     panic_mode: bool,
     scanner: Scanner,
     compiling_chunk: Chunk,
-    compiler: Compiler
+    compiler: Compiler,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 enum Precedence {
     PrecNone,
-    PrecAssignment,  // =
-    PrecOr,          // Or
-    PrecAnd,         // And
-    PrecEquality,    // == !=
-    PrecComparison,  // < > <= >=
-    PrecTerm,        // + -
-    PrecFactor,      // * /
-    PrecUnary,       // ! -
-    PrecCall,        // . ()
-    PrecPrimary
+    PrecAssignment, // =
+    PrecOr,         // Or
+    PrecAnd,        // And
+    PrecEquality,   // == !=
+    PrecComparison, // < > <= >=
+    PrecTerm,       // + -
+    PrecFactor,     // * /
+    PrecUnary,      // ! -
+    PrecCall,       // . ()
+    PrecPrimary,
 }
 
 fn get_next_rule(precedence: Precedence) -> Precedence {
@@ -50,18 +55,23 @@ enum ParseFn {
     None,
     Literal,
     String,
-    Variable
+    Variable,
+    And,
+    Or,
 }
 
 struct ParseRule {
     prefix: ParseFn,
     infix: ParseFn,
-    precedence: Precedence
+    precedence: Precedence,
 }
 
 const UINT8_COUNT: usize = (u8::MAX as usize) + 1;
 const DEFAULT_TOKEN: Token = Token::new_dummy_token();
-const DEFAULT_LOCAL: Local = Local { depth: 0, name: DEFAULT_TOKEN };
+const DEFAULT_LOCAL: Local = Local {
+    depth: 0,
+    name: DEFAULT_TOKEN,
+};
 
 struct Compiler {
     local_count: isize,
@@ -89,13 +99,12 @@ impl Default for Local {
     fn default() -> Self {
         Local {
             depth: 0,
-            name: Token::new_dummy_token()
+            name: Token::new_dummy_token(),
         }
     }
 }
 
 impl Parser {
-
     pub fn get_compiling_chunk(self) -> Chunk {
         self.compiling_chunk
     }
@@ -118,54 +127,53 @@ impl Parser {
         ParseRule {
             prefix: prefix,
             infix: infix,
-            precedence: precedence
+            precedence: precedence,
         }
     }
 
     fn get_rule_tuple(operator_type: TokenType) -> (ParseFn, ParseFn, Precedence) {
         match operator_type {
-            TokenType::TokenLeftParen =>     (ParseFn::Grouping, ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenRightParen =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenLeftBrace =>     (ParseFn::None,     ParseFn::None,   Precedence::PrecNone), 
-            TokenType::TokenRightBrace =>    (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenComma =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenDot =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenMinus =>         (ParseFn::Unary,    ParseFn::Binary, Precedence::PrecTerm),
-            TokenType::TokenPlus =>          (ParseFn::None,     ParseFn::Binary, Precedence::PrecTerm),
-            TokenType::TokenSemicolon =>     (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenSlash =>         (ParseFn::None,     ParseFn::Binary, Precedence::PrecFactor),
-            TokenType::TokenStar =>          (ParseFn::None,     ParseFn::Binary, Precedence::PrecFactor),
-            TokenType::TokenBang =>          (ParseFn::Unary,    ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenBangEqual =>     (ParseFn::None,     ParseFn::Binary, Precedence::PrecEquality),
-            TokenType::TokenEqual =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenEqualEqual =>    (ParseFn::None,     ParseFn::Binary, Precedence::PrecEquality),
-            TokenType::TokenGreater =>       (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
-            TokenType::TokenGreaterEqual =>  (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
-            TokenType::TokenLess =>          (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
-            TokenType::TokenLessEqual =>     (ParseFn::None,     ParseFn::Binary, Precedence::PrecComparison),
-            TokenType::TokenIdentifier =>    (ParseFn::Variable, ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenString =>        (ParseFn::String,   ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenNumber =>        (ParseFn::Number,   ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenAnd =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenClass =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenElse =>          (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenFalse =>         (ParseFn::Literal,  ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenFor =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenFun =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenIf =>            (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenNil =>           (ParseFn::Literal,  ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenOr =>            (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenPrint =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenReturn =>        (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenSuper =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenThis =>          (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenTrue =>          (ParseFn::Literal,  ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenVar =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenWhile =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenError =>         (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
-            TokenType::TokenEof =>           (ParseFn::None,     ParseFn::None,   Precedence::PrecNone),
+            TokenType::TokenLeftParen => (ParseFn::Grouping, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenRightParen => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenLeftBrace => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenRightBrace => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenComma => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenDot => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenMinus => (ParseFn::Unary, ParseFn::Binary, Precedence::PrecTerm),
+            TokenType::TokenPlus => (ParseFn::None, ParseFn::Binary, Precedence::PrecTerm),
+            TokenType::TokenSemicolon => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenSlash => (ParseFn::None, ParseFn::Binary, Precedence::PrecFactor),
+            TokenType::TokenStar => (ParseFn::None, ParseFn::Binary, Precedence::PrecFactor),
+            TokenType::TokenBang => (ParseFn::Unary, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenBangEqual => (ParseFn::None, ParseFn::Binary, Precedence::PrecEquality),
+            TokenType::TokenEqual => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenEqualEqual => (ParseFn::None, ParseFn::Binary, Precedence::PrecEquality),
+            TokenType::TokenGreater => (ParseFn::None, ParseFn::Binary, Precedence::PrecComparison),
+            TokenType::TokenGreaterEqual => (ParseFn::None, ParseFn::Binary, Precedence::PrecComparison),
+            TokenType::TokenLess => (ParseFn::None, ParseFn::Binary, Precedence::PrecComparison),
+            TokenType::TokenLessEqual => (ParseFn::None, ParseFn::Binary, Precedence::PrecComparison),
+            TokenType::TokenIdentifier => (ParseFn::Variable, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenString => (ParseFn::String, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenNumber => (ParseFn::Number, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenAnd => (ParseFn::None, ParseFn::And, Precedence::PrecAnd),
+            TokenType::TokenClass => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenElse => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenFalse => (ParseFn::Literal, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenFor => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenFun => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenIf => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenNil => (ParseFn::Literal, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenOr => (ParseFn::None, ParseFn::Or, Precedence::PrecNone),
+            TokenType::TokenPrint => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenReturn => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenSuper => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenThis => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenTrue => (ParseFn::Literal, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenVar => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenWhile => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenError => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
+            TokenType::TokenEof => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
         }
-                    
     }
 
     fn error(&mut self, message: &str) {
@@ -182,7 +190,6 @@ impl Parser {
         if token.token_type == TokenType::TokenEof {
             print!(" at end");
         } else if token.token_type == TokenType::TokenError {
-
         } else {
             print!(" at {}", token.content)
         }
@@ -202,7 +209,7 @@ impl Parser {
                 break;
             }
 
-            self.error_at_current( &self.current.content.clone());
+            self.error_at_current(&self.current.content.clone());
         }
     }
 
@@ -242,7 +249,10 @@ impl Parser {
             self.emit_byte(map_opcode_to_binary(OpCode::OpNil));
         }
 
-        self.consume(TokenType::TokenSemicolon, "Expect ';' after variable declaration.");
+        self.consume(
+            TokenType::TokenSemicolon,
+            "Expect ';' after variable declaration.",
+        );
 
         self.define_variable(global);
     }
@@ -268,7 +278,8 @@ impl Parser {
     }
 
     fn mark_initialized(&mut self) {
-        self.compiler.locals[(self.compiler.local_count - 1) as usize].depth = self.compiler.scope_depth;
+        self.compiler.locals[(self.compiler.local_count - 1) as usize].depth =
+            self.compiler.scope_depth;
     }
 
     fn identifier_constant(&mut self, token: &Token, vm: &mut VM) -> u8 {
@@ -298,7 +309,6 @@ impl Parser {
             i = i - 1;
         }
 
-
         self.add_local(name, vm);
     }
 
@@ -307,7 +317,6 @@ impl Parser {
     }
 
     fn add_local(&mut self, name: Token, _: &mut VM) {
-
         if self.compiler.local_count == UINT8_COUNT as isize {
             self.error("Too many local variables in function.");
             return;
@@ -337,14 +346,20 @@ impl Parser {
                 TokenType::TokenWhile => return,
                 TokenType::TokenPrint => return,
                 TokenType::TokenReturn => return,
-                _ => {},
+                _ => {}
             }
         }
     }
 
-    fn statement(&mut self, vm:&mut VM) {
+    fn statement(&mut self, vm: &mut VM) {
         if self.match_token(TokenType::TokenPrint) {
             self.print_statement(vm);
+        } else if self.match_token(TokenType::TokenFor) {
+            self.for_statement(vm);
+        } else if self.match_token(TokenType::TokenIf) {
+            self.if_statement(vm);
+        } else if self.match_token(TokenType::TokenWhile) {
+            self.while_statement(vm);
         } else if self.match_token(TokenType::TokenLeftBrace) {
             self.begin_scope();
             self.block(vm);
@@ -354,8 +369,112 @@ impl Parser {
         }
     }
 
-    fn block(&mut self, vm:&mut VM) {
-        while ! self.check(TokenType::TokenRightBrace) && !self.check(TokenType::TokenEof) {
+    fn for_statement(&mut self, vm: &mut VM) {
+        self.begin_scope();
+        self.consume(TokenType::TokenLeftParen, "Expect '(' after 'for'.");
+        if self.match_token(TokenType::TokenSemicolon) {
+            // No initializer.
+        } else if self.match_token(TokenType::TokenVar) {
+            self.var_declaration(vm);
+        } else {
+            self.expression_statement(vm);
+        }
+        
+        let mut loop_start = self.current_chunk().count();
+        let mut exit_jump: Option<usize> = None;
+        if !self.match_token(TokenType::TokenSemicolon) {
+            self.expression(vm);
+            self.consume(TokenType::TokenSemicolon, "Expect ';' after loop condition.");
+
+            // Jump out of the loop if the condition is false.
+            exit_jump = Some(self.emit_jump(map_opcode_to_binary(OpCode::OpJumpIfFalse)));
+            self.emit_byte(map_opcode_to_binary(OpCode::OpPop)); // Condition.
+        }
+
+        if !self.match_token(TokenType::TokenRightParen) {
+            let body_jump = self.emit_jump(map_opcode_to_binary(OpCode::OpJump));
+            let increment_start = self.current_chunk().count();
+            self.expression(vm);
+            self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+            self.consume(TokenType::TokenRightParen, "Expect ')' after for clauses.");
+            self.emit_loop(loop_start);
+            loop_start = increment_start;
+            self.patch_jump(body_jump);
+
+        }
+
+        self.statement(vm);
+        self.emit_loop(loop_start);
+
+        if exit_jump.is_some() {
+            self.patch_jump(exit_jump.unwrap());
+            self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+        }
+        self.end_scope();
+    }
+
+    fn while_statement(&mut self, vm: &mut VM) {
+        let loop_start = self.current_chunk().count();
+        self.consume(TokenType::TokenLeftParen, "Expect '(' after 'while'.");
+        self.expression(vm);
+        self.consume(TokenType::TokenRightParen, "Expect ')' after condition.");
+
+        let exit_jump = self.emit_jump(map_opcode_to_binary(OpCode::OpJumpIfFalse));
+        self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+        self.statement(vm);
+        self.emit_loop(loop_start);
+        self.patch_jump(exit_jump);
+        self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+    }
+
+    fn emit_loop(&mut self, loop_start: usize) {
+        self.emit_byte(map_opcode_to_binary(OpCode::OpLoop));
+        let offset = self.current_chunk().count() - loop_start + 2;
+        if offset > u16::MAX as usize {
+            self.error("Loop body too larger");
+        }
+
+        self.emit_byte(((offset >> 8) & 0xFF) as u8);
+        self.emit_byte((offset & 0xFF) as u8);
+    }
+
+    fn if_statement(&mut self, vm: &mut VM) {
+        self.consume(TokenType::TokenLeftParen, "Expect '(' after 'if'.");
+        self.expression(vm);
+        self.consume(TokenType::TokenRightParen, "Expect ')' after condition.");
+
+        let then_jump = self.emit_jump(map_opcode_to_binary(OpCode::OpJumpIfFalse));
+        self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+        self.statement(vm);
+        let else_jump = self.emit_jump(map_opcode_to_binary(OpCode::OpJump));
+        self.patch_jump(then_jump);
+        self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+
+        if self.match_token(TokenType::TokenElse) {
+            self.statement(vm);
+        }
+        self.patch_jump(else_jump);
+    }
+
+    fn emit_jump(&mut self, instruction: u8) -> usize {
+        self.emit_byte(instruction);
+        self.emit_byte(0xFF);
+        self.emit_byte(0xFF);
+        self.current_chunk().count() - 2
+    }
+
+    fn patch_jump(&mut self, offset: usize) {
+        let jump = self.current_chunk().count() - offset - 2;
+        if jump > u16::MAX as usize {
+            self.error("Too much code to jump over.");
+        }
+
+        self.current_chunk().code[offset] = ((jump >> 8) & 0xFF) as u8;
+        self.current_chunk().code[offset + 1] = (jump & 0xFF) as u8;
+    }
+
+    fn block(&mut self, vm: &mut VM) {
+        while !self.check(TokenType::TokenRightBrace) && !self.check(TokenType::TokenEof) {
             self.declaration(vm);
         }
 
@@ -369,11 +488,12 @@ impl Parser {
     fn end_scope(&mut self) {
         self.compiler.scope_depth = self.compiler.scope_depth - 1;
 
-        while 
-            self.compiler.local_count > 0 && 
-            self.compiler.locals[(self.compiler.local_count - 1) as usize].depth > self.compiler.scope_depth {
-                self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
-                self.compiler.local_count = self.compiler.local_count - 1;
+        while self.compiler.local_count > 0
+            && self.compiler.locals[(self.compiler.local_count - 1) as usize].depth
+                > self.compiler.scope_depth
+        {
+            self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+            self.compiler.local_count = self.compiler.local_count - 1;
         }
     }
 
@@ -395,7 +515,7 @@ impl Parser {
         self.current.token_type == token_type
     }
 
-    fn print_statement(&mut self, vm:&mut VM) {
+    fn print_statement(&mut self, vm: &mut VM) {
         self.expression(vm);
         self.consume(TokenType::TokenSemicolon, "Expect ';' after value.");
         self.emit_byte(map_opcode_to_binary(OpCode::OpPrint));
@@ -405,10 +525,10 @@ impl Parser {
         if self.current.token_type == token_type {
             self.advance();
             return;
-        } 
+        }
 
         //println!("consume failed. Expected {:?}, got {:?}", token_type, self.current);
-        
+
         self.error_at_current(message);
     }
 
@@ -437,9 +557,9 @@ impl Parser {
     fn expression(&mut self, vm: &mut VM) {
         self.parse_precedence(Precedence::PrecAssignment, vm);
     }
-    
+
     fn number(&mut self, _: &mut VM) {
-        let value : f64  = self.previous.content.parse().unwrap();
+        let value: f64 = self.previous.content.parse().unwrap();
         self.emit_constant(Value::Number(value));
     }
 
@@ -483,13 +603,13 @@ impl Parser {
             self.error("Expect expression.");
             return;
         }
-      
+
         let can_assign = precedence <= Precedence::PrecAssignment;
         self.run_rule(rule.prefix, can_assign, vm);
 
         while precedence <= Parser::get_rule(self.current.token_type).precedence {
             self.advance();
-            let infix= Parser::get_rule(self.previous.token_type).infix;
+            let infix = Parser::get_rule(self.previous.token_type).infix;
             self.run_rule(infix, can_assign, vm);
         }
 
@@ -508,7 +628,7 @@ impl Parser {
         self.emit_constant(value);
     }
 
-    fn variable(&mut self,  can_assign: bool, vm: &mut VM) {
+    fn variable(&mut self, can_assign: bool, vm: &mut VM) {
         self.named_variable(self.previous.clone(), can_assign, vm);
     }
 
@@ -549,40 +669,94 @@ impl Parser {
 
     fn literal(&mut self, _: &mut VM) {
         match self.previous.token_type {
-            TokenType::TokenFalse => { self.emit_byte(map_opcode_to_binary(OpCode::OpFalse)); }
-            TokenType::TokenNil => { self.emit_byte(map_opcode_to_binary(OpCode::OpNil)); }
-            TokenType::TokenTrue => { self.emit_byte(map_opcode_to_binary(OpCode::OpTrue)); }
-            _ => { }
+            TokenType::TokenFalse => {
+                self.emit_byte(map_opcode_to_binary(OpCode::OpFalse));
+            }
+            TokenType::TokenNil => {
+                self.emit_byte(map_opcode_to_binary(OpCode::OpNil));
+            }
+            TokenType::TokenTrue => {
+                self.emit_byte(map_opcode_to_binary(OpCode::OpTrue));
+            }
+            _ => {}
         }
+    }
+
+    fn and(&mut self, vm: &mut VM) {
+        let end_jump = self.emit_jump(map_opcode_to_binary(OpCode::OpJumpIfFalse));
+        self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+        self.parse_precedence(Precedence::PrecAnd, vm);
+        self.patch_jump(end_jump);
+    }
+
+    fn or(&mut self, vm: &mut VM) {
+        let else_jump = self.emit_jump(map_opcode_to_binary(OpCode::OpJumpIfFalse));
+        let end_jump = self.emit_jump(map_opcode_to_binary(OpCode::OpJump));
+
+        self.patch_jump(else_jump);
+        self.emit_byte(map_opcode_to_binary(OpCode::OpPop));
+        self.parse_precedence(Precedence::PrecOr, vm);
+        self.patch_jump(end_jump);
     }
 
     fn run_rule(&mut self, rule: ParseFn, can_assign: bool, vm: &mut VM) {
         match rule {
-            ParseFn::Binary => { self.binary(vm); },
-            ParseFn::Grouping => { self.grouping(vm); },
-            ParseFn::Number => { self.number(vm); },
-            ParseFn::Unary => { self.unary(vm); },
-            ParseFn::Literal => { self.literal(vm); }
-            ParseFn::String => { self.string(vm); }
-            ParseFn::Variable => { self.variable(can_assign, vm); }
-            ParseFn::None => { panic!(); }
+            ParseFn::Binary => {
+                self.binary(vm);
+            }
+            ParseFn::Grouping => {
+                self.grouping(vm);
+            }
+            ParseFn::Number => {
+                self.number(vm);
+            }
+            ParseFn::Unary => {
+                self.unary(vm);
+            }
+            ParseFn::Literal => {
+                self.literal(vm);
+            }
+            ParseFn::String => {
+                self.string(vm);
+            }
+            ParseFn::Variable => {
+                self.variable(can_assign, vm);
+            }
+            ParseFn::None => {
+                panic!();
+            }
+            ParseFn::And => {
+                self.and(vm);
+            }
+            ParseFn::Or => {
+                self.or(vm);
+            }
         }
     }
 
     fn binary(&mut self, vm: &mut VM) {
         let operator_type: TokenType = self.previous.token_type;
 
-        let rule= Parser::get_rule(operator_type);
+        let rule = Parser::get_rule(operator_type);
 
         self.parse_precedence(get_next_rule(rule.precedence), vm);
 
         match operator_type {
-            TokenType::TokenBangEqual => self.emit_bytes(map_opcode_to_binary(OpCode::OpEqual), map_opcode_to_binary(OpCode::OpNot)),
+            TokenType::TokenBangEqual => self.emit_bytes(
+                map_opcode_to_binary(OpCode::OpEqual),
+                map_opcode_to_binary(OpCode::OpNot),
+            ),
             TokenType::TokenEqualEqual => self.emit_byte(map_opcode_to_binary(OpCode::OpEqual)),
             TokenType::TokenGreater => self.emit_byte(map_opcode_to_binary(OpCode::OpGreater)),
-            TokenType::TokenGreaterEqual => self.emit_bytes(map_opcode_to_binary(OpCode::OpLess), map_opcode_to_binary(OpCode::OpNot)),
+            TokenType::TokenGreaterEqual => self.emit_bytes(
+                map_opcode_to_binary(OpCode::OpLess),
+                map_opcode_to_binary(OpCode::OpNot),
+            ),
             TokenType::TokenLess => self.emit_byte(map_opcode_to_binary(OpCode::OpLess)),
-            TokenType::TokenLessEqual => self.emit_bytes(map_opcode_to_binary(OpCode::OpGreater), map_opcode_to_binary(OpCode::OpNot)),
+            TokenType::TokenLessEqual => self.emit_bytes(
+                map_opcode_to_binary(OpCode::OpGreater),
+                map_opcode_to_binary(OpCode::OpNot),
+            ),
             TokenType::TokenPlus => self.emit_byte(map_opcode_to_binary(OpCode::OpAdd)),
             TokenType::TokenMinus => self.emit_byte(map_opcode_to_binary(OpCode::OpSubtract)),
             TokenType::TokenStar => self.emit_byte(map_opcode_to_binary(OpCode::OpMultiply)),
@@ -590,5 +764,4 @@ impl Parser {
             _ => {}
         }
     }
-    
 }

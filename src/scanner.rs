@@ -21,53 +21,53 @@ impl Token {
             start: 0,
             length: 0,
             line: 0,
-            content: String::new()
+            content: String::new(),
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenType {
-    TokenLeftParen, 
+    TokenLeftParen,
     TokenRightParen,
-    TokenLeftBrace, 
+    TokenLeftBrace,
     TokenRightBrace,
-    TokenComma, 
-    TokenDot, 
-    TokenMinus, 
+    TokenComma,
+    TokenDot,
+    TokenMinus,
     TokenPlus,
-    TokenSemicolon, 
-    TokenSlash, 
+    TokenSemicolon,
+    TokenSlash,
     TokenStar,
-    TokenBang, 
+    TokenBang,
     TokenBangEqual,
-    TokenEqual, 
+    TokenEqual,
     TokenEqualEqual,
-    TokenGreater, 
+    TokenGreater,
     TokenGreaterEqual,
-    TokenLess, 
+    TokenLess,
     TokenLessEqual,
-    TokenIdentifier, 
-    TokenString, 
+    TokenIdentifier,
+    TokenString,
     TokenNumber,
-    TokenAnd, 
-    TokenClass, 
-    TokenElse, 
+    TokenAnd,
+    TokenClass,
+    TokenElse,
     TokenFalse,
-    TokenFor, 
-    TokenFun, 
-    TokenIf, 
-    TokenNil, 
+    TokenFor,
+    TokenFun,
+    TokenIf,
+    TokenNil,
     TokenOr,
-    TokenPrint, 
-    TokenReturn, 
-    TokenSuper, 
+    TokenPrint,
+    TokenReturn,
+    TokenSuper,
     TokenThis,
-    TokenTrue, 
-    TokenVar, 
+    TokenTrue,
+    TokenVar,
     TokenWhile,
-    TokenError, 
-    TokenEof
+    TokenError,
+    TokenEof,
 }
 
 fn is_digit(c: char) -> bool {
@@ -75,9 +75,7 @@ fn is_digit(c: char) -> bool {
 }
 
 fn is_alpha(c: char) -> bool {
-    (c >= 'a' && c <= 'z') || 
-    (c >= 'A' && c <= 'Z') ||
-    c == '_'
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_'
 }
 
 impl Scanner {
@@ -86,7 +84,7 @@ impl Scanner {
             line: 1,
             current: 0,
             start: 0,
-            source: source.into()
+            source: source.into(),
         }
     }
 
@@ -125,26 +123,42 @@ impl Scanner {
             '/' => return self.make_token(TokenType::TokenSlash),
             '*' => return self.make_token(TokenType::TokenStar),
             '!' => {
-                let token_type = if self.match_char('=') { TokenType::TokenBangEqual } else { TokenType::TokenBang };
+                let token_type = if self.match_char('=') {
+                    TokenType::TokenBangEqual
+                } else {
+                    TokenType::TokenBang
+                };
                 return self.make_token(token_type);
             }
             '=' => {
-                let token_type = if self.match_char('=') { TokenType::TokenEqualEqual } else { TokenType::TokenEqual };
+                let token_type = if self.match_char('=') {
+                    TokenType::TokenEqualEqual
+                } else {
+                    TokenType::TokenEqual
+                };
                 return self.make_token(token_type);
             }
             '<' => {
-                let token_type = if self.match_char('=') { TokenType::TokenLessEqual } else { TokenType::TokenLess };
+                let token_type = if self.match_char('=') {
+                    TokenType::TokenLessEqual
+                } else {
+                    TokenType::TokenLess
+                };
                 return self.make_token(token_type);
             }
             '>' => {
-                let token_type = if self.match_char('=') { TokenType::TokenGreaterEqual } else { TokenType::TokenGreater };
+                let token_type = if self.match_char('=') {
+                    TokenType::TokenGreaterEqual
+                } else {
+                    TokenType::TokenGreater
+                };
                 return self.make_token(token_type);
             }
             '"' => {
                 return self.string();
             }
 
-            _ => { 
+            _ => {
                 println!("Unexpected character:{}", c);
                 return self.error_token("Unexpected character.");
             }
@@ -165,24 +179,52 @@ impl Scanner {
         let default = TokenType::TokenIdentifier;
 
         match start_char {
-            'a' => { return self.check_keyword(1, 2, "nd", TokenType::TokenAnd); }
-            'c' => { return self.check_keyword(1, 4, "lass", TokenType::TokenClass); }
-            'e' => { return self.check_keyword(1, 3, "lse", TokenType::TokenElse); }
-            'i' => { return self.check_keyword(1, 1, "f", TokenType::TokenIf); }
-            'n' => { return self.check_keyword(1, 2, "il", TokenType::TokenNil); }
-            'o' => { return self.check_keyword(1, 1, "r", TokenType::TokenOr); }
-            'p' => { return self.check_keyword(1, 4, "rint", TokenType::TokenPrint); }
-            'r' => { return self.check_keyword(1, 5, "eturn", TokenType::TokenReturn); }
-            's' => { return self.check_keyword(1, 4, "uper", TokenType::TokenSuper); }
-            'v' => { return self.check_keyword(1, 2, "ar", TokenType::TokenVar); }
-            'w' => { return self.check_keyword(1, 4, "hile", TokenType::TokenWhile); }
+            'a' => {
+                return self.check_keyword(1, 2, "nd", TokenType::TokenAnd);
+            }
+            'c' => {
+                return self.check_keyword(1, 4, "lass", TokenType::TokenClass);
+            }
+            'e' => {
+                return self.check_keyword(1, 3, "lse", TokenType::TokenElse);
+            }
+            'i' => {
+                return self.check_keyword(1, 1, "f", TokenType::TokenIf);
+            }
+            'n' => {
+                return self.check_keyword(1, 2, "il", TokenType::TokenNil);
+            }
+            'o' => {
+                return self.check_keyword(1, 1, "r", TokenType::TokenOr);
+            }
+            'p' => {
+                return self.check_keyword(1, 4, "rint", TokenType::TokenPrint);
+            }
+            'r' => {
+                return self.check_keyword(1, 5, "eturn", TokenType::TokenReturn);
+            }
+            's' => {
+                return self.check_keyword(1, 4, "uper", TokenType::TokenSuper);
+            }
+            'v' => {
+                return self.check_keyword(1, 2, "ar", TokenType::TokenVar);
+            }
+            'w' => {
+                return self.check_keyword(1, 4, "hile", TokenType::TokenWhile);
+            }
             'f' => {
                 if self.current - self.start > 1 {
                     let next_starting_char = self.source.as_bytes()[self.start + 1] as char;
                     match next_starting_char {
-                        'a' => { return self.check_keyword(2, 3, "lse", TokenType::TokenFalse); }
-                        'o' => { return self.check_keyword(2, 1, "r", TokenType::TokenFor); }
-                        'u' => { return self.check_keyword(2, 1, "n", TokenType::TokenFun); }
+                        'a' => {
+                            return self.check_keyword(2, 3, "lse", TokenType::TokenFalse);
+                        }
+                        'o' => {
+                            return self.check_keyword(2, 1, "r", TokenType::TokenFor);
+                        }
+                        'u' => {
+                            return self.check_keyword(2, 1, "n", TokenType::TokenFun);
+                        }
                         _ => return default,
                     }
                 }
@@ -192,20 +234,30 @@ impl Scanner {
                 if self.current - self.start > 1 {
                     let next_starting_char = self.source.as_bytes()[self.start + 1] as char;
                     match next_starting_char {
-                        'h' => { return self.check_keyword(2, 2, "is", TokenType::TokenThis); }
-                        'r' => { return self.check_keyword(2, 2, "ue", TokenType::TokenTrue); }
+                        'h' => {
+                            return self.check_keyword(2, 2, "is", TokenType::TokenThis);
+                        }
+                        'r' => {
+                            return self.check_keyword(2, 2, "ue", TokenType::TokenTrue);
+                        }
                         _ => return default,
                     }
                 }
                 default
             }
-            _ => default
+            _ => default,
         }
     }
 
-    fn check_keyword(&mut self, start: usize, length: usize, rest: &str, token_type: TokenType) -> TokenType {
+    fn check_keyword(
+        &mut self,
+        start: usize,
+        length: usize,
+        rest: &str,
+        token_type: TokenType,
+    ) -> TokenType {
         if self.current - self.start == start + length {
-            for i in 0..length  {
+            for i in 0..length {
                 let current_substring_char = self.source.as_bytes()[self.start + start + i];
                 let to_compare_to = rest.as_bytes()[i];
 
@@ -254,26 +306,29 @@ impl Scanner {
 
     fn skip_whitespace(&mut self) {
         loop {
+            if self.is_at_end() {
+                return;
+            }
             let c = self.peek();
             match c {
-                ' ' | '\r' | '\t' => { 
+                ' ' | '\r' | '\t' => {
                     self.advance();
                 }
-                '\n' => { 
+                '\n' => {
                     self.line = self.line + 1;
                     self.advance();
                 }
                 '/' => {
                     if self.peek_next() == '/' {
-                        while self.peek() != '\n' && !self.is_at_end() {
+                        while !self.is_at_end() && self.peek() != '\n' {
                             self.advance();
                         }
                     } else {
                         return;
                     }
                 }
-                _ => { 
-                    return; 
+                _ => {
+                    return;
                 }
             }
         }
@@ -304,9 +359,9 @@ impl Scanner {
 
         self.current = self.current + 1;
         return true;
-    } 
+    }
 
-    fn get_current_char(&self) ->  char {
+    fn get_current_char(&self) -> char {
         let current_char = self.source.as_bytes()[self.current];
         current_char as char
     }
@@ -318,12 +373,11 @@ impl Scanner {
     }
 
     fn is_at_end(&self) -> bool {
-        let is_at_end = self.current >=  self.source.as_bytes().len();
+        let is_at_end = self.current >= self.source.as_bytes().len();
         is_at_end
     }
 
     fn make_token(&self, token_type: TokenType) -> Token {
-
         let string = self.source[self.start..self.current].into();
 
         Token {
@@ -331,18 +385,17 @@ impl Scanner {
             start: self.start,
             length: self.current - self.start,
             line: self.line,
-            content: string
+            content: string,
         }
     }
 
     fn error_token(&self, message: &str) -> Token {
-
         Token {
             token_type: TokenType::TokenError,
             start: 0,
             length: message.as_bytes().len(),
             line: self.line,
-            content: message.into()
+            content: message.into(),
         }
     }
 }

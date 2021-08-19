@@ -1,4 +1,4 @@
-use crate::value::{Value};
+use crate::value::Value;
 
 #[derive(Debug, Clone, FromPrimitive, ToPrimitive)]
 pub enum OpCode {
@@ -23,6 +23,9 @@ pub enum OpCode {
     OpGetGlobal = 18,
     OpGetLocal = 19,
     OpSetLocal = 20,
+    OpJumpIfFalse = 21,
+    OpJump = 22,
+    OpLoop = 23,
 }
 
 pub struct Chunk {
@@ -42,10 +45,14 @@ pub fn map_opcode_to_binary(opcode: OpCode) -> u8 {
 impl Chunk {
     pub fn new() -> Chunk {
         Chunk {
-            code: vec!(),
-            lines: vec!(),
-            constants: vec!(),
+            code: vec![],
+            lines: vec![],
+            constants: vec![],
         }
+    }
+
+    pub fn count(&self) -> usize {
+        self.code.len()
     }
 
     pub fn write_chunk(&mut self, byte: u8, line: usize) {
@@ -167,8 +174,36 @@ impl Chunk {
             OpCode::OpGetLocal => {
                 println!("OpGetLocal");
                 offset + 2
+            },
+            OpCode::OpJump => {
+                println!("OpJump");
+                let a = (self.code[offset + 1] as u16) << 8;
+                let b = self.code[offset + 2] as u16;
+
+                let jump = a | b;
+                
+                offset + 3
+
             }
+            OpCode::OpJumpIfFalse => {
+                println!("OpJumpIfFalse");
+                let a = (self.code[offset + 1] as u16) << 8;
+                let b = self.code[offset + 2] as u16;
+
+                let jump = a | b;
+                
+                offset + 3
+            }
+            OpCode::OpLoop => {
+                println!("OpLoop");
+                let a = (self.code[offset + 1] as u16) << 8;
+                let b = self.code[offset + 2] as u16;
+
+                let jump = a | b;
+                
+                offset + 3
+            }
+
         }
     }
-
 }

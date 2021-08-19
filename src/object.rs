@@ -1,15 +1,13 @@
 use generational_arena::Index;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct ObjectString { 
+pub struct ObjectString {
     id: Index,
 }
 
 impl ObjectString {
     pub fn new(index: Index) -> ObjectString {
-        ObjectString {
-            id: index
-        }
+        ObjectString { id: index }
     }
 
     pub fn id(&self) -> &Index {
@@ -25,13 +23,13 @@ pub enum Object {
 impl Object {
     pub fn is_string(&self) -> bool {
         match &self {
-            Self::ObjString(_) => { true }
+            Self::ObjString(_) => true,
         }
     }
 
     pub fn as_string(&self) -> &ObjectString {
         match &self {
-            Self::ObjString(a) => { return a },
+            Self::ObjString(a) => return a,
         }
     }
 }
