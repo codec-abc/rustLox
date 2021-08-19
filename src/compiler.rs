@@ -60,6 +60,7 @@ enum ParseFn {
     Or,
 }
 
+#[derive(Debug)]
 struct ParseRule {
     prefix: ParseFn,
     infix: ParseFn,
@@ -163,7 +164,7 @@ impl Parser {
             TokenType::TokenFun => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
             TokenType::TokenIf => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
             TokenType::TokenNil => (ParseFn::Literal, ParseFn::None, Precedence::PrecNone),
-            TokenType::TokenOr => (ParseFn::None, ParseFn::Or, Precedence::PrecNone),
+            TokenType::TokenOr => (ParseFn::None, ParseFn::Or, Precedence::PrecOr),
             TokenType::TokenPrint => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
             TokenType::TokenReturn => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
             TokenType::TokenSuper => (ParseFn::None, ParseFn::None, Precedence::PrecNone),
@@ -609,7 +610,8 @@ impl Parser {
 
         while precedence <= Parser::get_rule(self.current.token_type).precedence {
             self.advance();
-            let infix = Parser::get_rule(self.previous.token_type).infix;
+            let new_rule = Parser::get_rule(self.previous.token_type);
+            let infix = new_rule.infix;
             self.run_rule(infix, can_assign, vm);
         }
 

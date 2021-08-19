@@ -1,2 +1,8 @@
+print 1 + 2;
+
+var a = true and false;
+print a;
+print false or true;
+
 print "hi" or 2; // expect "hi".
 print nil or "yes"; // expect "yes".

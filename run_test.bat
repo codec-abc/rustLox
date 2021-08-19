@@ -24,7 +24,7 @@ cargo run .\examples\blocks\MultipleNestedBlocks.lox
 @REM cargo run .\examples\functions\RecursiveFunction.lox
 @REM cargo run .\examples\functions\ReturnFromNestedBlocks.lox
 cargo run .\examples\logical\operators\IfOperator.lox
-@REM cargo run .\examples\logical\operators\LogicalOperators.lox
+cargo run .\examples\logical\operators\LogicalOperators.lox
 cargo run .\examples\loops\ForLoop.lox
 cargo run .\examples\loops\WhileLoop.lox
 cargo run .\examples\statements\SimplePrintStatements.lox
